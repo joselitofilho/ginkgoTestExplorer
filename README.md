@@ -73,3 +73,10 @@ Ensure that you've read through the extensions guidelines and follow the best pr
 
 #####
 chmod g+rwx /root /root/.config /root/.config/insight-nodejs
+
+
+####
+go get -v github.com/onsi/ginkgo/ginkgo
+go run github.com/onsi/ginkgo/ginkgo
+export GOPATH=/go
+export PATH=$PATH:$GOPATH/bin
