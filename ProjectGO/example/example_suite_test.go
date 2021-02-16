@@ -11,5 +11,5 @@ import (
 func TestTransformersSuite(t *testing.T) {
 	logrus.SetLevel(logrus.DebugLevel)
 	RegisterFailHandler(Fail)
-	RunSpecs(t, "Transformers Suite")
+	RunSpecs(t, "Example Suite")
 }
