@@ -80,7 +80,7 @@ export class GinkgoTestExplorer {
     private async onRunAllTests() {
         const output = await this.ginkgoProvider.runAllTests();
         outputChannel.appendLine('Running all test...');
-        outputChannel.appendLine(`${output}`);
+        outputChannel.appendLine(JSON.stringify(output, null, 4));
     }
 
     private async onGotoSymbolInEditor() {

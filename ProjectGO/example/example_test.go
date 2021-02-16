@@ -6,6 +6,12 @@ import (
 )
 
 var _ = Describe("Example", func() {
+	When("1", func() {
+		It("1.1", func() {
+
+		})
+	})
+
 	It("converts map to slice", func() {
 		// m := map[string]interface{}{
 		// 	"ID":    1234,
@@ -14,7 +20,7 @@ var _ = Describe("Example", func() {
 		// }
 		// slice := example.MapToSlice(m)
 		// Expect(slice).To(HaveLen(6))
-		Expect(1).To(Equal(1))
+		Expect(1).To(Equal(2))
 	})
 	It("converts slice to map", func() {
 		// slice := []interface{}{"ID", 1234, "Name", "Joselito", "Email", "joselitofilhoo@gmail.com"}

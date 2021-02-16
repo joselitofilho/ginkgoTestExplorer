@@ -1,11 +1,13 @@
 'use strict';
 
-import * as outliner from "../outliner";
 import * as vscode from 'vscode';
+import * as path from "path";
+import * as outliner from "../outliner";
+import { Icons } from "../icons";
 
 // iconForGinkgoNode returns the icon representation of the ginkgo node.
 // See https://code.visualstudio.com/api/references/icons-in-labels#icon-listing
-export function iconForGinkgoNode(node: outliner.GinkgoNode): vscode.ThemeIcon | undefined {
+export function iconForGinkgoNode(context: vscode.ExtensionContext, node: outliner.GinkgoNode): vscode.ThemeIcon | { light: string | vscode.Uri; dark: string | vscode.Uri } {
     if (node.spec) {
         if (node.pending) {
             return new vscode.ThemeIcon('stop');
@@ -17,7 +19,13 @@ export function iconForGinkgoNode(node: outliner.GinkgoNode): vscode.ThemeIcon |
             case 'Measure':
                 return new vscode.ThemeIcon('dashboard');
             default:
-                return new vscode.ThemeIcon('play');
+                if (node.result) {
+                    return new vscode.ThemeIcon('play');
+                }
+                return {
+                    dark: context.asAbsolutePath(path.join("resources", "dark", Icons.test)),
+                    light: context.asAbsolutePath(path.join("resources", "light", Icons.test))
+                }
         }
     }
 
@@ -49,7 +57,7 @@ export function iconForGinkgoNode(node: outliner.GinkgoNode): vscode.ThemeIcon |
         case 'By':
             return new vscode.ThemeIcon('comment');
         default:
-            return undefined;
+            return new vscode.ThemeIcon('play');
     }
 }
 
