@@ -26,46 +26,34 @@ export let outputChannel: vscode.OutputChannel;
 
 export class GinkgoTestExplorer {
 
-    constructor(ctx: vscode.ExtensionContext) {
-        outputChannel = vscode.window.createOutputChannel(displayName);
-        ctx.subscriptions.push(outputChannel);
-        outputChannel.appendLine('Activating Ginkgo Outline');
-        outputChannel.appendLine('ginkgoPath::' + getConfiguration().get('ginkgoPath', defaultGinkgoPath));
+    private cachingOutliner: CachingOutliner;
 
-        const cachingOutliner = new CachingOutliner(new Outliner(getConfiguration().get('ginkgoPath', defaultGinkgoPath)), getConfiguration().get('cacheTTL', defaultCacheTTL));
-        ctx.subscriptions.push({ dispose: () => { cachingOutliner.clear(); } });
-        ctx.subscriptions.push(vscode.workspace.onDidChangeConfiguration(evt => {
+    constructor(context: vscode.ExtensionContext) {
+        outputChannel = vscode.window.createOutputChannel(displayName);
+        context.subscriptions.push(outputChannel);
+        outputChannel.appendLine('Activating Ginkgo Outline');
+
+        this.cachingOutliner = new CachingOutliner(new Outliner(getConfiguration().get('ginkgoPath', defaultGinkgoPath)), getConfiguration().get('cacheTTL', defaultCacheTTL));
+        context.subscriptions.push({ dispose: () => { this.cachingOutliner.clear(); } });
+        context.subscriptions.push(vscode.workspace.onDidChangeConfiguration(evt => {
             if (affectsConfiguration(evt, 'ginkgoPath')) {
-                cachingOutliner.setOutliner(new Outliner(getConfiguration().get('ginkgoPath', defaultGinkgoPath)));
+                this.cachingOutliner.setOutliner(new Outliner(getConfiguration().get('ginkgoPath', defaultGinkgoPath)));
             }
             if (affectsConfiguration(evt, 'cacheTTL')) {
-                cachingOutliner.setCacheTTL(getConfiguration().get('cacheTTL', defaultCacheTTL));
+                this.cachingOutliner.setCacheTTL(getConfiguration().get('cacheTTL', defaultCacheTTL));
             }
         }));
 
-        ctx.subscriptions.push(vscode.commands.registerCommand('ginkgotestexplorer.GotoSymbolInEditor', async () => {
-            if (!vscode.window.activeTextEditor) {
-                outputChannel.appendLine('Did not create the Go To Symbol menu: no active text editor');
-                return;
-            }
-            try {
-                await symbolPicker.fromTextEditor(vscode.window.activeTextEditor, doc => cachingOutliner.fromDocument(doc));
-            } catch (err) {
-                outputChannel.appendLine(`Could not create the Go To Symbol menu: ${err}`);
-                const action = await vscode.window.showErrorMessage('Could not create the Go To Symbol menu', ...['Open Log']);
-                if (action === 'Open Log') {
-                    outputChannel.show();
-                }
-            }
-        }));
+        context.subscriptions.push(vscode.commands.registerCommand("ginkgotestexplorer.runAllTest", this.onRunAllTests.bind(this)));
+        context.subscriptions.push(vscode.commands.registerCommand('ginkgotestexplorer.GotoSymbolInEditor', this.onGotoSymbolInEditor.bind(this)));
 
-        const ginkgoTreeDataProvider = new treeDataProvider.TreeDataProvider(ctx, doc => cachingOutliner.fromDocument(doc), 'ginkgotestexplorer.clickTreeItem',
+        const ginkgoTreeDataProvider = new treeDataProvider.TreeDataProvider(context, doc => this.cachingOutliner.fromDocument(doc), 'ginkgotestexplorer.clickTreeItem',
             getConfiguration().get('updateOn', defaultUpdateOn),
             getConfiguration().get('updateOnTypeDelay', defaultUpdateOnTypeDelay),
             getConfiguration().get('doubleClickThreshold', defaultDoubleClickThreshold),
         );
-        ctx.subscriptions.push(vscode.window.registerTreeDataProvider('ginkgotestexplorer.views.outline', ginkgoTreeDataProvider));
-        ctx.subscriptions.push(vscode.workspace.onDidChangeConfiguration(evt => {
+        context.subscriptions.push(vscode.window.registerTreeDataProvider('ginkgotestexplorer', ginkgoTreeDataProvider));
+        context.subscriptions.push(vscode.workspace.onDidChangeConfiguration(evt => {
             if (affectsConfiguration(evt, 'updateOn')) {
                 ginkgoTreeDataProvider.setUpdateOn(getConfiguration().get('updateOn', defaultUpdateOn));
             }
@@ -76,6 +64,29 @@ export class GinkgoTestExplorer {
                 ginkgoTreeDataProvider.setDoubleClickThreshold(getConfiguration().get('doubleClickThreshold', defaultDoubleClickThreshold));
             }
         }));
+    }
+
+    private onRunAllTests() {
+        // this.goTestProvider.discoveredTests.
+        //     filter(s => s.isTestSuite).
+        //     forEach(t => this.runTestSuite(t));
+        outputChannel.appendLine('Running all tests');
+    }
+
+    private async onGotoSymbolInEditor() {
+        if (!vscode.window.activeTextEditor) {
+            outputChannel.appendLine('Did not create the Go To Symbol menu: no active text editor');
+            return;
+        }
+        try {
+            await symbolPicker.fromTextEditor(vscode.window.activeTextEditor, doc => this.cachingOutliner.fromDocument(doc));
+        } catch (err) {
+            outputChannel.appendLine(`Could not create the Go To Symbol menu: ${err}`);
+            const action = await vscode.window.showErrorMessage('Could not create the Go To Symbol menu', ...['Open Log']);
+            if (action === 'Open Log') {
+                outputChannel.show();
+            }
+        }
     }
 
 }
