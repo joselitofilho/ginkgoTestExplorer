@@ -2,6 +2,7 @@
 
 import * as vscode from 'vscode';
 import * as cp from 'child_process';
+import { TestResult } from './testResult';
 
 export interface Outline {
     nested: GinkgoNode[];
@@ -18,6 +19,8 @@ export interface GinkgoNode {
     spec: boolean;
     focused: boolean;
     pending: boolean;
+
+    result: TestResult;
 
     nodes: GinkgoNode[];
     parent: GinkgoNode;

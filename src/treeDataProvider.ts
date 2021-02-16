@@ -22,9 +22,9 @@ export class TreeDataProvider implements vscode.TreeDataProvider<outliner.Ginkgo
 
     private documentChangedTimer?: NodeJS.Timeout;
 
-    constructor(private readonly ctx: vscode.ExtensionContext, private readonly outlineFromDoc: { (doc: vscode.TextDocument): Promise<outliner.Outline> }, private readonly clickTreeItemCommand: string, private updateOn: UpdateOn, private updateOnTypeDelay: number, private doubleClickThreshold: number) {
-        ctx.subscriptions.push(vscode.commands.registerCommand(this.clickTreeItemCommand, async (node) => this.clickTreeItem(node)));
-        ctx.subscriptions.push(vscode.window.onDidChangeActiveTextEditor(evt => this.onActiveEditorChanged(evt)));
+    constructor(private readonly context: vscode.ExtensionContext, private readonly outlineFromDoc: { (doc: vscode.TextDocument): Promise<outliner.Outline> }, private readonly clickTreeItemCommand: string, private updateOn: UpdateOn, private updateOnTypeDelay: number, private doubleClickThreshold: number) {
+        context.subscriptions.push(vscode.commands.registerCommand(this.clickTreeItemCommand, async (node) => this.clickTreeItem(node)));
+        context.subscriptions.push(vscode.window.onDidChangeActiveTextEditor(evt => this.onActiveEditorChanged(evt)));
         this.editor = vscode.window.activeTextEditor;
         this.setUpdateOn(this.updateOn);
         this.setUpdateOnTypeDelay(this.updateOnTypeDelay);
@@ -36,10 +36,10 @@ export class TreeDataProvider implements vscode.TreeDataProvider<outliner.Ginkgo
         }
         switch (updateOn) {
             case 'onType':
-                this.updateListener = vscode.workspace.onDidChangeTextDocument(this.onDocumentChanged, this, this.ctx.subscriptions);
+                this.updateListener = vscode.workspace.onDidChangeTextDocument(this.onDocumentChanged, this, this.context.subscriptions);
                 break;
             case 'onSave':
-                this.updateListener = vscode.workspace.onDidSaveTextDocument(this.onDocumentSaved, this, this.ctx.subscriptions);
+                this.updateListener = vscode.workspace.onDidSaveTextDocument(this.onDocumentSaved, this, this.context.subscriptions);
                 break;
         }
     }
@@ -128,7 +128,7 @@ export class TreeDataProvider implements vscode.TreeDataProvider<outliner.Ginkgo
         const label = decorationUtil.labelForGinkgoNode(element);
         const collapsibleState: vscode.TreeItemCollapsibleState = element.nodes.length > 0 ? vscode.TreeItemCollapsibleState.Expanded : vscode.TreeItemCollapsibleState.None;
         const treeItem = new vscode.TreeItem(label, collapsibleState);
-        treeItem.iconPath = decorationUtil.iconForGinkgoNode(element);
+        treeItem.iconPath = decorationUtil.iconForGinkgoNode(this.context, element);
         treeItem.tooltip = tooltipForGinkgoNode(element);
         treeItem.command = {
             command: this.clickTreeItemCommand,

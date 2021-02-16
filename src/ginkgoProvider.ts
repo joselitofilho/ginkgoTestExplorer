@@ -7,19 +7,28 @@ import * as path from "path";
 import * as fs from "fs";
 const { readdir } = require('fs').promises;
 
+import  * as junit2json from 'junit2json'
+import { TestResult } from './testResult';
+import { fromJSON } from './outliner';
+
 export class GinkgoProvider {
 
     constructor(public ginkgoPath: string, public cwd: string) { };
 
-    public async runAllTests(): Promise<String> {
-        let output: string = await callGinkgoBuildAllTests(this.ginkgoPath, this.cwd);
-        let files: string[] = [];
-        await callGetAllTestFiles(this.cwd).then(res => {
-            files = res
-        })
+    public async runAllTests(): Promise<TestResult[]> {
+        await callGinkgoBuildAllTests(this.ginkgoPath, this.cwd);
+        const files = await callGetAllTestFiles(this.cwd)
+        let output: TestResult[] = [];
         for (const file of files) {
-            // output += ` f: ${file} `
-            output += await callRunTest(file);
+            const xml = await callRunTest(file);
+            const report = await junit2json.parse(xml) as junit2json.TestSuite
+            for (const tc of report.testcase) {
+                if (tc.failure !== undefined && tc.failure.length > 0) {
+                    output = [...output, new TestResult(tc.classname, tc.name, false, tc.failure[0].inner)]
+                } else {
+                    output = [...output, new TestResult(tc.classname, tc.name, true)]
+                }
+            }
         }
         return output;
     }
@@ -65,17 +74,9 @@ export async function callRunTest(execFile: string): Promise<string> {
     return await new Promise<string>((resolve, reject) => {
         const reportFile = execFile.replace(".test", ".report")
         cp.execFile(execFile, ['-ginkgo.reportFile', reportFile], {}, (err, stdout, stderr) => {
-            if (err) {
-                let msg = `error running "${err.cmd}"`;
-                if (err.code) {
-                    msg += ` (error code ${err.code})`;
-                }
-                if (stderr) {
-                    msg += `: ${stderr}`;
-                }
-                return reject(new Error(msg));
-            }
-            const result = stdout.toString();
+            const result = fs.readFileSync(reportFile, 'utf-8');
+            fs.unlinkSync(reportFile)
+            fs.unlinkSync(execFile)
             return resolve(result);
         });
     });

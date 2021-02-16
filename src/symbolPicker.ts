@@ -12,10 +12,11 @@ class GinkgoNodeItem implements vscode.QuickPickItem {
     detail = '';
 
     constructor(readonly node: outliner.GinkgoNode) {
-        const icon = decorationUtil.iconForGinkgoNode(node);
-        if (icon) {
-            this.label += `$(${icon.id}) `;
-        }
+        // TODO: ???
+        // const icon = decorationUtil.iconForGinkgoNode(node);
+        // if (icon) {
+        //     this.label += `$(${icon.id}) `;
+        // }
         this.label += decorationUtil.labelForGinkgoNode(node);
     }
 }
