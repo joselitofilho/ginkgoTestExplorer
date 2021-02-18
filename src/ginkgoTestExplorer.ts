@@ -1,9 +1,10 @@
 import * as vscode from 'vscode';
-import { GinkgoProvider } from './ginkgoProvider';
-import { Outliner } from './outliner';
+import { GinkgoTestProvider } from './ginkgoTestProvider';
+import { Outline, Outliner } from './outliner';
 import { CachingOutliner } from './cachingOutliner';
 import * as symbolPicker from './symbolPicker';
 import * as treeDataProvider from './treeDataProvider';
+import { Commands } from './commands';
 
 const extensionName = 'ginkgotestexplorer';
 const displayName = 'Ginkgo Test Explorer';
@@ -27,10 +28,13 @@ export let outputChannel: vscode.OutputChannel;
 
 export class GinkgoTestExplorer {
 
-    private ginkgoProvider: GinkgoProvider;
+    private ginkgoTestProvider: GinkgoTestProvider;
     private cachingOutliner: CachingOutliner;
+    private outliner: Outliner;
 
+    readonly commands: Commands;
     constructor(context: vscode.ExtensionContext) {
+        this.commands = new Commands();
         outputChannel = vscode.window.createOutputChannel(displayName);
         context.subscriptions.push(outputChannel);
         outputChannel.appendLine('Activating Ginkgo Outline');
@@ -42,13 +46,15 @@ export class GinkgoTestExplorer {
             outputChannel.appendLine(`YOUR-EXTENSION: folder: ${wf} - ${f}`);
             cwd = vscode.workspace.workspaceFolders[0].uri.fsPath;
         }
-        this.ginkgoProvider = new GinkgoProvider(getConfiguration().get('ginkgoPath', defaultGinkgoPath), cwd);
+        this.ginkgoTestProvider = new GinkgoTestProvider(getConfiguration().get('ginkgoPath', defaultGinkgoPath), cwd);
 
-        this.cachingOutliner = new CachingOutliner(new Outliner(getConfiguration().get('ginkgoPath', defaultGinkgoPath)), getConfiguration().get('cacheTTL', defaultCacheTTL));
+        this.outliner = new Outliner(getConfiguration().get('ginkgoPath', defaultGinkgoPath), this.commands)
+
+        this.cachingOutliner = new CachingOutliner(this.outliner, getConfiguration().get('cacheTTL', defaultCacheTTL));
         context.subscriptions.push({ dispose: () => { this.cachingOutliner.clear(); } });
         context.subscriptions.push(vscode.workspace.onDidChangeConfiguration(evt => {
             if (affectsConfiguration(evt, 'ginkgoPath')) {
-                this.cachingOutliner.setOutliner(new Outliner(getConfiguration().get('ginkgoPath', defaultGinkgoPath)));
+                this.cachingOutliner.setOutliner(this.outliner);
             }
             if (affectsConfiguration(evt, 'cacheTTL')) {
                 this.cachingOutliner.setCacheTTL(getConfiguration().get('cacheTTL', defaultCacheTTL));
@@ -58,7 +64,7 @@ export class GinkgoTestExplorer {
         context.subscriptions.push(vscode.commands.registerCommand("ginkgotestexplorer.runAllTest", this.onRunAllTests.bind(this)));
         context.subscriptions.push(vscode.commands.registerCommand('ginkgotestexplorer.GotoSymbolInEditor', this.onGotoSymbolInEditor.bind(this)));
 
-        const ginkgoTreeDataProvider = new treeDataProvider.TreeDataProvider(context, doc => this.cachingOutliner.fromDocument(doc), 'ginkgotestexplorer.clickTreeItem',
+        const ginkgoTreeDataProvider = new treeDataProvider.TreeDataProvider(context, this.commands, doc => this.cachingOutliner.fromDocument(doc), 'ginkgotestexplorer.clickTreeItem',
             getConfiguration().get('updateOn', defaultUpdateOn),
             getConfiguration().get('updateOnTypeDelay', defaultUpdateOnTypeDelay),
             getConfiguration().get('doubleClickThreshold', defaultDoubleClickThreshold),
@@ -78,9 +84,10 @@ export class GinkgoTestExplorer {
     }
 
     private async onRunAllTests() {
-        const output = await this.ginkgoProvider.runAllTests();
+        const testResults = await this.ginkgoTestProvider.runAllTests();
+        this.commands.sendTestResult(testResults)
         outputChannel.appendLine('Running all test...');
-        outputChannel.appendLine(JSON.stringify(output, null, 4));
+        outputChannel.appendLine(JSON.stringify(testResults, null, 4));
     }
 
     private async onGotoSymbolInEditor() {

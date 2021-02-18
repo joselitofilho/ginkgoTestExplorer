@@ -4,6 +4,7 @@ export class TestResult {
         public suiteName: string,
         public testName: string,
         public isPassed: boolean,
+        public isSkipped: boolean,
         public output?: string,
         public error?: Error
     ) { }
