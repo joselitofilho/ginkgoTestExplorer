@@ -9,9 +9,8 @@ const { readdir } = require('fs').promises;
 
 import  * as junit2json from 'junit2json'
 import { TestResult } from './testResult';
-import { fromJSON } from './outliner';
 
-export class GinkgoProvider {
+export class GinkgoTestProvider {
 
     constructor(public ginkgoPath: string, public cwd: string) { };
 
@@ -23,10 +22,11 @@ export class GinkgoProvider {
             const xml = await callRunTest(file);
             const report = await junit2json.parse(xml) as junit2json.TestSuite
             for (const tc of report.testcase) {
+                const isSkipped = tc.skipped !== undefined;
                 if (tc.failure !== undefined && tc.failure.length > 0) {
-                    output = [...output, new TestResult(tc.classname, tc.name, false, tc.failure[0].inner)]
+                    output = [...output, new TestResult(tc.classname, tc.name, false, isSkipped, tc.failure[0].inner)]
                 } else {
-                    output = [...output, new TestResult(tc.classname, tc.name, true)]
+                    output = [...output, new TestResult(tc.classname, tc.name, true, isSkipped)]
                 }
             }
         }

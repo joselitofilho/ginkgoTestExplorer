@@ -5,6 +5,8 @@ import * as outliner from './outliner';
 import * as editorUtil from './util/editor';
 import * as decorationUtil from './util/decoration';
 import { outputChannel } from './ginkgoTestExplorer';
+import { TestResult } from './testResult';
+import { Commands } from './commands';
 
 type UpdateOn = 'onSave' | 'onType';
 export class TreeDataProvider implements vscode.TreeDataProvider<outliner.GinkgoNode> {
@@ -16,13 +18,19 @@ export class TreeDataProvider implements vscode.TreeDataProvider<outliner.Ginkgo
 
     private editor?: vscode.TextEditor;
     private roots: outliner.GinkgoNode[] = [];
+    private __discoveredTestsMap?: Map<string, outliner.GinkgoNode>;
+    private _discoveredTests?: outliner.GinkgoNode[];
 
     private lastClickedNode?: outliner.GinkgoNode;
     private lastClickedTime?: number;
 
     private documentChangedTimer?: NodeJS.Timeout;
 
-    constructor(private readonly context: vscode.ExtensionContext, private readonly outlineFromDoc: { (doc: vscode.TextDocument): Promise<outliner.Outline> }, private readonly clickTreeItemCommand: string, private updateOn: UpdateOn, private updateOnTypeDelay: number, private doubleClickThreshold: number) {
+    private log = vscode.window.createOutputChannel("treeDataProvider");
+
+    constructor(private readonly context: vscode.ExtensionContext, commands: Commands, private readonly outlineFromDoc: { (doc: vscode.TextDocument): Promise<outliner.Outline> }, private readonly clickTreeItemCommand: string, private updateOn: UpdateOn, private updateOnTypeDelay: number, private doubleClickThreshold: number) {
+        context.subscriptions.push(commands.discoveredTest(this.onDicoveredTest, this));
+        context.subscriptions.push(commands.testResult(this.onTestResult, this));
         context.subscriptions.push(vscode.commands.registerCommand(this.clickTreeItemCommand, async (node) => this.clickTreeItem(node)));
         context.subscriptions.push(vscode.window.onDidChangeActiveTextEditor(evt => this.onActiveEditorChanged(evt)));
         this.editor = vscode.window.activeTextEditor;
@@ -164,6 +172,38 @@ export class TreeDataProvider implements vscode.TreeDataProvider<outliner.Ginkgo
         void vscode.commands.executeCommand('workbench.action.focusActiveEditorGroup');
     }
 
+    private getNodeKey(node: outliner.GinkgoNode): string {
+        if (node.name.endsWith("When")) {
+            return this.getNodeKey(node.parent) + " when " + node.text
+        }
+        if (node.parent) {
+            return this.getNodeKey(node.parent) + " " + node.text
+        }
+        return node.text;
+    }
+
+    private onDicoveredTest(nodes: outliner.GinkgoNode[]) {
+        this._discoveredTests = nodes && nodes.length > 0 ? nodes : [];
+        this.__discoveredTestsMap = new Map();
+        this._discoveredTests.forEach(node => {
+            const nodeKey = this.getNodeKey(node).trim();
+            this.log.appendLine("onTestResult::nodeKey = " + nodeKey);
+			this.__discoveredTestsMap?.set(nodeKey, node);
+		});
+    }
+
+    private onTestResult(results: TestResult[]) {
+        results.forEach(result => {
+            const nodeName = result.testName;
+            this.log.appendLine("onTestResult::nodeName = " + nodeName);
+            let testNode = this.__discoveredTestsMap?.get(nodeName);
+            if (testNode) {
+                testNode.spec = true;
+                testNode.result = result
+                this._onDidChangeTreeData.fire(testNode);
+            }
+        })
+	}
 }
 
 function wasRecentlyClicked(threshold: number, lastClickedNode: outliner.GinkgoNode, lastClickedTime: number, currentNode: outliner.GinkgoNode, currentTime: number): boolean {
@@ -179,7 +219,8 @@ function tooltipForGinkgoNode(element: outliner.GinkgoNode): vscode.MarkdownStri
 **end:** ${element.end}  \n
 **spec:** ${element.spec}  \n
 **focused:** ${element.focused}  \n
-**pending:** ${element.pending}`, false);
+**pending:** ${element.pending} \n
+**result:** ${element.result?.isPassed}`, false);
 }
 
 // isMainEditor returns true if the editor is one where a user is editing a Go file.

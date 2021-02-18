@@ -12,16 +12,21 @@ export function iconForGinkgoNode(context: vscode.ExtensionContext, node: outlin
         if (node.pending) {
             return new vscode.ThemeIcon('stop');
         }
-        if (node.focused) {
-            return new vscode.ThemeIcon('play-circle');
-        }
         switch (node.name) {
             case 'Measure':
                 return new vscode.ThemeIcon('dashboard');
             default:
                 if (node.result) {
-                    return new vscode.ThemeIcon('play');
+                    const iconName = (node.result.isSkipped) ? Icons.testClosed : (node.result.isPassed) ? Icons.testPassed : Icons.testFailed;
+                    return {
+                        dark: context.asAbsolutePath(path.join("resources", "dark", iconName)),
+                        light: context.asAbsolutePath(path.join("resources", "light", iconName))
+                    }
                 }
+                // TODO: Implement when running a specific test
+                // if (node.focused) {
+                //     return new vscode.ThemeIcon('play-circle');
+                // }
                 return {
                     dark: context.asAbsolutePath(path.join("resources", "dark", Icons.test)),
                     light: context.asAbsolutePath(path.join("resources", "light", Icons.test))
@@ -69,6 +74,12 @@ export function labelForGinkgoNode(node: outliner.GinkgoNode): string {
         case 'PIt':
         case 'XIt':
             prefix = 'It';
+            break;
+        case 'When':
+        case 'FWhen':
+        case 'PWhen':
+        case 'XWhen':
+            prefix = 'When';
             break;
         case 'Specify':
         case 'FSpecify':

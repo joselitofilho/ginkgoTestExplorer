@@ -12,7 +12,7 @@ var _ = Describe("Example", func() {
 		})
 	})
 
-	It("converts map to slice", func() {
+	FIt("converts map to slice", func() {
 		// m := map[string]interface{}{
 		// 	"ID":    1234,
 		// 	"Name":  "Joselito",
