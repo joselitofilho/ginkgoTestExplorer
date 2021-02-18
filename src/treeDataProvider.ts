@@ -26,8 +26,6 @@ export class TreeDataProvider implements vscode.TreeDataProvider<outliner.Ginkgo
 
     private documentChangedTimer?: NodeJS.Timeout;
 
-    private log = vscode.window.createOutputChannel("treeDataProvider");
-
     constructor(private readonly context: vscode.ExtensionContext, commands: Commands, private readonly outlineFromDoc: { (doc: vscode.TextDocument): Promise<outliner.Outline> }, private readonly clickTreeItemCommand: string, private updateOn: UpdateOn, private updateOnTypeDelay: number, private doubleClickThreshold: number) {
         context.subscriptions.push(commands.discoveredTest(this.onDicoveredTest, this));
         context.subscriptions.push(commands.testResult(this.onTestResult, this));
@@ -185,9 +183,12 @@ export class TreeDataProvider implements vscode.TreeDataProvider<outliner.Ginkgo
     private onDicoveredTest(nodes: outliner.GinkgoNode[]) {
         this._discoveredTests = nodes && nodes.length > 0 ? nodes : [];
         this.__discoveredTestsMap = new Map();
+        const hasFocused = this._discoveredTests.find(node => node.focused)
         this._discoveredTests.forEach(node => {
+            if (hasFocused && !node.focused) {
+                node.pending = true;
+            }
             const nodeKey = this.getNodeKey(node).trim();
-            this.log.appendLine("onTestResult::nodeKey = " + nodeKey);
 			this.__discoveredTestsMap?.set(nodeKey, node);
 		});
     }
@@ -195,7 +196,6 @@ export class TreeDataProvider implements vscode.TreeDataProvider<outliner.Ginkgo
     private onTestResult(results: TestResult[]) {
         results.forEach(result => {
             const nodeName = result.testName;
-            this.log.appendLine("onTestResult::nodeName = " + nodeName);
             let testNode = this.__discoveredTestsMap?.get(nodeName);
             if (testNode) {
                 testNode.spec = true;
