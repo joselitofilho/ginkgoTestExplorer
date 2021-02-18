@@ -39,7 +39,7 @@ export class GinkgoTestExplorer {
         context.subscriptions.push(outputChannel);
         outputChannel.appendLine('Activating Ginkgo Outline');
 
-        let cwd = ""
+        let cwd = "";
         if (vscode.workspace.workspaceFolders) {
             const wf = vscode.workspace.workspaceFolders[0].uri.path;
             const f = vscode.workspace.workspaceFolders[0].uri.fsPath;
@@ -48,7 +48,7 @@ export class GinkgoTestExplorer {
         }
         this.ginkgoTestProvider = new GinkgoTestProvider(getConfiguration().get('ginkgoPath', defaultGinkgoPath), cwd);
 
-        this.outliner = new Outliner(getConfiguration().get('ginkgoPath', defaultGinkgoPath), this.commands)
+        this.outliner = new Outliner(getConfiguration().get('ginkgoPath', defaultGinkgoPath), this.commands);
 
         this.cachingOutliner = new CachingOutliner(this.outliner, getConfiguration().get('cacheTTL', defaultCacheTTL));
         context.subscriptions.push({ dispose: () => { this.cachingOutliner.clear(); } });
@@ -85,7 +85,7 @@ export class GinkgoTestExplorer {
 
     private async onRunAllTests() {
         const testResults = await this.ginkgoTestProvider.runAllTests();
-        this.commands.sendTestResult(testResults)
+        this.commands.sendTestResult(testResults);
         outputChannel.appendLine('Running all test...');
         outputChannel.appendLine(JSON.stringify(testResults, null, 4));
     }
