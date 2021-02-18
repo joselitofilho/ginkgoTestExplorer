@@ -6,7 +6,7 @@ import (
 )
 
 var _ = Describe("Example", func() {
-	FWhen("1", func() {
+	When("1", func() {
 		It("1.1", func() {
 			By("1.1.1", func() {
 				Expect(1).To(Equal(2))

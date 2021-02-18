@@ -1,9 +1,9 @@
 import * as vscode from 'vscode';
-import { GinkgoTestProvider } from './ginkgoTestProvider';
+import { GinkgoTestDiscover } from './ginkgoTestDiscover';
 import { Outliner } from './outliner';
 import { CachingOutliner } from './cachingOutliner';
 import * as symbolPicker from './symbolPicker';
-import { TreeDataProvider } from './treeDataProvider';
+import { GinkgoTestProvider } from './ginkgoTestProvider';
 import { Commands } from './commands';
 
 const extensionName = 'ginkgotestexplorer';
@@ -28,26 +28,23 @@ export let outputChannel: vscode.OutputChannel;
 
 export class GinkgoTestExplorer {
 
-    private ginkgoTestProvider: GinkgoTestProvider;
+    private ginkgoTestDiscover: GinkgoTestDiscover;
     private cachingOutliner: CachingOutliner;
     private outliner: Outliner;
-    private ginkgoTreeDataProvider: TreeDataProvider;
+    private ginkgoTreeDataProvider: GinkgoTestProvider;
 
     readonly commands: Commands;
     constructor(context: vscode.ExtensionContext) {
         this.commands = new Commands();
         outputChannel = vscode.window.createOutputChannel(displayName);
         context.subscriptions.push(outputChannel);
-        outputChannel.appendLine('Activating Ginkgo Outline');
+        outputChannel.appendLine('Activating Ginkgo Explorer');
 
         let cwd = "";
         if (vscode.workspace.workspaceFolders) {
-            const wf = vscode.workspace.workspaceFolders[0].uri.path;
-            const f = vscode.workspace.workspaceFolders[0].uri.fsPath;
-            outputChannel.appendLine(`YOUR-EXTENSION: folder: ${wf} - ${f}`);
             cwd = vscode.workspace.workspaceFolders[0].uri.fsPath;
         }
-        this.ginkgoTestProvider = new GinkgoTestProvider(getConfiguration().get('ginkgoPath', defaultGinkgoPath), cwd);
+        this.ginkgoTestDiscover = new GinkgoTestDiscover(getConfiguration().get('ginkgoPath', defaultGinkgoPath), cwd);
 
         this.outliner = new Outliner(getConfiguration().get('ginkgoPath', defaultGinkgoPath), this.commands);
 
@@ -60,12 +57,9 @@ export class GinkgoTestExplorer {
             if (affectsConfiguration(evt, 'cacheTTL')) {
                 this.cachingOutliner.setCacheTTL(getConfiguration().get('cacheTTL', defaultCacheTTL));
             }
-        }));
+        }));        
 
-        context.subscriptions.push(vscode.commands.registerCommand("ginkgotestexplorer.runAllTest", this.onRunAllTests.bind(this)));
-        context.subscriptions.push(vscode.commands.registerCommand('ginkgotestexplorer.GotoSymbolInEditor', this.onGotoSymbolInEditor.bind(this)));
-
-        this.ginkgoTreeDataProvider = new TreeDataProvider(context, this.commands, doc => this.cachingOutliner.fromDocument(doc), 'ginkgotestexplorer.clickTreeItem',
+        this.ginkgoTreeDataProvider = new GinkgoTestProvider(context, this.commands, doc => this.cachingOutliner.fromDocument(doc), 'ginkgotestexplorer.clickTreeItem',
             getConfiguration().get('updateOn', defaultUpdateOn),
             getConfiguration().get('updateOnTypeDelay', defaultUpdateOnTypeDelay),
             getConfiguration().get('doubleClickThreshold', defaultDoubleClickThreshold),
@@ -82,13 +76,16 @@ export class GinkgoTestExplorer {
                 this.ginkgoTreeDataProvider.setDoubleClickThreshold(getConfiguration().get('doubleClickThreshold', defaultDoubleClickThreshold));
             }
         }));
+
+        context.subscriptions.push(vscode.commands.registerCommand("ginkgotestexplorer.runAllTest", this.onRunAllTests.bind(this)));
+        context.subscriptions.push(vscode.commands.registerCommand('ginkgotestexplorer.GotoSymbolInEditor', this.onGotoSymbolInEditor.bind(this)));
     }
 
     private async onRunAllTests() {
         this.ginkgoTreeDataProvider.discoveredTests.
             filter(test => test.spec).
             forEach(node => this.commands.sendTestRunStarted(node));
-        const testResults = await this.ginkgoTestProvider.runAllTests();
+        const testResults = await this.ginkgoTestDiscover.runAllTests();
         this.commands.sendTestResult(testResults);
         outputChannel.appendLine('Running all test...');
         outputChannel.appendLine(JSON.stringify(testResults, null, 4));
