@@ -6,31 +6,23 @@ import (
 )
 
 var _ = Describe("Example", func() {
-	When("1", func() {
-		It("1.1", func() {
-			By("1.1.1", func() {
-				Expect(1).To(Equal(2))
-			})
+	It("works", func() {
+		By("specific job works", func() {
+			Expect(1).To(Equal(1))
+		})
+		Expect(2).To(Equal(2))
+	})
 
+	When("something happens", func() {
+		It("does not works", func() {
 			Expect(1).To(Equal(2))
 		})
 	})
 
-	It("converts map to slice", func() {
-		// m := map[string]interface{}{
-		// 	"ID":    1234,
-		// 	"Name":  "Joselito",
-		// 	"Email": "joselitofilhoo@gmail.com",
-		// }
-		// slice := example.MapToSlice(m)
-		// Expect(slice).To(HaveLen(6))
-		Expect(1).To(Equal(2))
-	})
-
-	It("converts slice to map", func() {
-		// slice := []interface{}{"ID", 1234, "Name", "Joselito", "Email", "joselitofilhoo@gmail.com"}
-		// m := example.SliceToMap(slice)
-		// Expect(m).To(HaveLen(3))
-		Expect(1).To(Equal(1))
-	})
+	Measure("it should do a method() hard efficiently", func(b Benchmarker) {
+		runtime := b.Time("runtime", func() {
+			Expect(1).To(Equal(1))
+		})
+		Expect(runtime.Seconds()).To(BeNumerically("<", 1), "method() shouldn't take too long.")
+	}, 10)
 })
