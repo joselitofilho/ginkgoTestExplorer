@@ -19,7 +19,7 @@ export class TreeDataProvider implements vscode.TreeDataProvider<outliner.Ginkgo
     private editor?: vscode.TextEditor;
     private roots: outliner.GinkgoNode[] = [];
     private discoveredTestsMap?: Map<string, outliner.GinkgoNode>;
-    private discoveredTests?: outliner.GinkgoNode[];
+    private _discoveredTests: outliner.GinkgoNode[];
 
     private lastClickedNode?: outliner.GinkgoNode;
     private lastClickedTime?: number;
@@ -28,13 +28,19 @@ export class TreeDataProvider implements vscode.TreeDataProvider<outliner.Ginkgo
 
     constructor(private readonly context: vscode.ExtensionContext, commands: Commands, private readonly outlineFromDoc: { (doc: vscode.TextDocument): Promise<outliner.Outline> }, private readonly clickTreeItemCommand: string, private updateOn: UpdateOn, private updateOnTypeDelay: number, private doubleClickThreshold: number) {
         context.subscriptions.push(commands.discoveredTest(this.onDicoveredTest, this));
+        context.subscriptions.push(commands.testRunStarted(this.onTestRunStarted, this));
         context.subscriptions.push(commands.testResult(this.onTestResult, this));
         context.subscriptions.push(vscode.commands.registerCommand(this.clickTreeItemCommand, async (node) => this.clickTreeItem(node)));
         context.subscriptions.push(vscode.window.onDidChangeActiveTextEditor(evt => this.onActiveEditorChanged(evt)));
         this.editor = vscode.window.activeTextEditor;
         this.setUpdateOn(this.updateOn);
         this.setUpdateOnTypeDelay(this.updateOnTypeDelay);
+        this._discoveredTests = new Array(0);
     }
+
+    get discoveredTests(): outliner.GinkgoNode[] {
+		return this._discoveredTests;
+	}
 
     public setUpdateOn(updateOn: UpdateOn) {
         if (this.updateListener) {
@@ -181,10 +187,10 @@ export class TreeDataProvider implements vscode.TreeDataProvider<outliner.Ginkgo
     }
 
     private onDicoveredTest(nodes: outliner.GinkgoNode[]) {
-        this.discoveredTests = nodes && nodes.length > 0 ? nodes : [];
+        this._discoveredTests = nodes && nodes.length > 0 ? nodes : [];
         this.discoveredTestsMap = new Map();
-        const hasFocused = this.discoveredTests.find(node => node.focused);
-        this.discoveredTests.forEach(node => {
+        const hasFocused = this._discoveredTests.find(node => node.focused);
+        this._discoveredTests.forEach(node => {
             if (hasFocused && !node.focused) {
                 node.pending = true;
             }
@@ -193,12 +199,17 @@ export class TreeDataProvider implements vscode.TreeDataProvider<outliner.Ginkgo
 		});
     }
 
+    private onTestRunStarted(testNode: outliner.GinkgoNode) {
+        testNode.running = true;
+        this._onDidChangeTreeData.fire(testNode);
+    }
+
     private onTestResult(results: TestResult[]) {
         results.forEach(result => {
             const nodeName = result.testName;
             let testNode = this.discoveredTestsMap?.get(nodeName);
             if (testNode) {
-                testNode.spec = true;
+                testNode.running = false;
                 testNode.result = result;
                 this._onDidChangeTreeData.fire(testNode);
             }

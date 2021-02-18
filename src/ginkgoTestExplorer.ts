@@ -1,9 +1,9 @@
 import * as vscode from 'vscode';
 import { GinkgoTestProvider } from './ginkgoTestProvider';
-import { Outline, Outliner } from './outliner';
+import { Outliner } from './outliner';
 import { CachingOutliner } from './cachingOutliner';
 import * as symbolPicker from './symbolPicker';
-import * as treeDataProvider from './treeDataProvider';
+import { TreeDataProvider } from './treeDataProvider';
 import { Commands } from './commands';
 
 const extensionName = 'ginkgotestexplorer';
@@ -31,6 +31,7 @@ export class GinkgoTestExplorer {
     private ginkgoTestProvider: GinkgoTestProvider;
     private cachingOutliner: CachingOutliner;
     private outliner: Outliner;
+    private ginkgoTreeDataProvider: TreeDataProvider;
 
     readonly commands: Commands;
     constructor(context: vscode.ExtensionContext) {
@@ -64,26 +65,29 @@ export class GinkgoTestExplorer {
         context.subscriptions.push(vscode.commands.registerCommand("ginkgotestexplorer.runAllTest", this.onRunAllTests.bind(this)));
         context.subscriptions.push(vscode.commands.registerCommand('ginkgotestexplorer.GotoSymbolInEditor', this.onGotoSymbolInEditor.bind(this)));
 
-        const ginkgoTreeDataProvider = new treeDataProvider.TreeDataProvider(context, this.commands, doc => this.cachingOutliner.fromDocument(doc), 'ginkgotestexplorer.clickTreeItem',
+        this.ginkgoTreeDataProvider = new TreeDataProvider(context, this.commands, doc => this.cachingOutliner.fromDocument(doc), 'ginkgotestexplorer.clickTreeItem',
             getConfiguration().get('updateOn', defaultUpdateOn),
             getConfiguration().get('updateOnTypeDelay', defaultUpdateOnTypeDelay),
             getConfiguration().get('doubleClickThreshold', defaultDoubleClickThreshold),
         );
-        context.subscriptions.push(vscode.window.registerTreeDataProvider('ginkgotestexplorer', ginkgoTreeDataProvider));
+        context.subscriptions.push(vscode.window.registerTreeDataProvider('ginkgotestexplorer', this.ginkgoTreeDataProvider));
         context.subscriptions.push(vscode.workspace.onDidChangeConfiguration(evt => {
             if (affectsConfiguration(evt, 'updateOn')) {
-                ginkgoTreeDataProvider.setUpdateOn(getConfiguration().get('updateOn', defaultUpdateOn));
+                this.ginkgoTreeDataProvider.setUpdateOn(getConfiguration().get('updateOn', defaultUpdateOn));
             }
             if (affectsConfiguration(evt, 'updateOnTypeDelay')) {
-                ginkgoTreeDataProvider.setUpdateOnTypeDelay(getConfiguration().get('updateOnTypeDelay', defaultUpdateOnTypeDelay));
+                this.ginkgoTreeDataProvider.setUpdateOnTypeDelay(getConfiguration().get('updateOnTypeDelay', defaultUpdateOnTypeDelay));
             }
             if (affectsConfiguration(evt, 'doubleClickThreshold')) {
-                ginkgoTreeDataProvider.setDoubleClickThreshold(getConfiguration().get('doubleClickThreshold', defaultDoubleClickThreshold));
+                this.ginkgoTreeDataProvider.setDoubleClickThreshold(getConfiguration().get('doubleClickThreshold', defaultDoubleClickThreshold));
             }
         }));
     }
 
     private async onRunAllTests() {
+        this.ginkgoTreeDataProvider.discoveredTests.
+            filter(test => test.spec).
+            forEach(node => this.commands.sendTestRunStarted(node));
         const testResults = await this.ginkgoTestProvider.runAllTests();
         this.commands.sendTestResult(testResults);
         outputChannel.appendLine('Running all test...');

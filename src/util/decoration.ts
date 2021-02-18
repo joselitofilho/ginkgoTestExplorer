@@ -8,6 +8,13 @@ import { Icons } from "../icons";
 // iconForGinkgoNode returns the icon representation of the ginkgo node.
 // See https://code.visualstudio.com/api/references/icons-in-labels#icon-listing
 export function iconForGinkgoNode(context: vscode.ExtensionContext, node: outliner.GinkgoNode): vscode.ThemeIcon | { light: string | vscode.Uri; dark: string | vscode.Uri } {
+    if (node.running) {
+        return {
+            dark: context.asAbsolutePath(path.join("resources", "dark", Icons.loading)),
+            light: context.asAbsolutePath(path.join("resources", "light", Icons.loading))
+        };
+    }
+
     if (node.spec) {
         if (node.pending) {
             return {

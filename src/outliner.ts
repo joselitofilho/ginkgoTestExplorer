@@ -20,6 +20,7 @@ export interface GinkgoNode {
     spec: boolean;
     focused: boolean;
     pending: boolean;
+    running: boolean;
 
     result?: TestResult;
 
