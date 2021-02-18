@@ -147,6 +147,7 @@ export class GinkgoTestProvider implements vscode.TreeDataProvider<outliner.Gink
             arguments: [element],
             title: ''
         };
+        treeItem.contextValue = 'test';
         return treeItem;
     }
 
@@ -194,8 +195,8 @@ export class GinkgoTestProvider implements vscode.TreeDataProvider<outliner.Gink
             if (hasFocused && !node.focused) {
                 node.pending = true;
             }
-            const nodeKey = this.getNodeKey(node).trim();
-            this.discoveredTestsMap?.set(nodeKey, node);
+            node.key = this.getNodeKey(node).trim();
+            this.discoveredTestsMap?.set(node.key, node);
         });
     }
 
