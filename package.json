@@ -1,8 +1,14 @@
 {
   "name": "ginkgotestexplorer",
-  "displayName": "GinkGoTestExplorer",
-  "description": "GinkGo Test Explorer",
+  "displayName": "Ginkgo Test Explorer",
+  "icon": "media/icon.png",
+  "description": "Provides support for Ginkgo and Gomega",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/joselitofilho/ginkgoTestExplorer"
+  },
   "version": "0.0.1",
+  "publisher": "joselitofilho",
   "engines": {
     "vscode": "^1.53.0"
   },
