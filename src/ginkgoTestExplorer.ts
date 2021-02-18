@@ -2,7 +2,7 @@ import * as vscode from 'vscode';
 import * as symbolPicker from './symbolPicker';
 import { GinkgoTestDiscover } from './ginkgoTestDiscover';
 import { GinkgoTestProvider } from './ginkgoTestProvider';
-import { Outliner } from './outliner';
+import { GinkgoNode, Outliner } from './outliner';
 import { CachingOutliner } from './cachingOutliner';
 import { Commands } from './commands';
 
@@ -38,7 +38,7 @@ export class GinkgoTestExplorer {
         this.commands = new Commands();
         outputChannel = vscode.window.createOutputChannel(displayName);
         context.subscriptions.push(outputChannel);
-        outputChannel.appendLine('Activating Ginkgo Explorer');
+        outputChannel.appendLine('Welcome to Ginkgo Explorer');
 
         let cwd = "";
         if (vscode.workspace.workspaceFolders) {
@@ -57,7 +57,7 @@ export class GinkgoTestExplorer {
             if (affectsConfiguration(evt, 'cacheTTL')) {
                 this.cachingOutliner.setCacheTTL(getConfiguration().get('cacheTTL', defaultCacheTTL));
             }
-        }));        
+        }));
 
         this.ginkgoTreeDataProvider = new GinkgoTestProvider(context, this.commands, doc => this.cachingOutliner.fromDocument(doc), 'ginkgotestexplorer.clickTreeItem',
             getConfiguration().get('updateOn', defaultUpdateOn),
@@ -77,12 +77,21 @@ export class GinkgoTestExplorer {
             }
         }));
 
+        context.subscriptions.push(vscode.commands.registerCommand("ginkgotestexplorer.showTestoutput", (testNode: GinkgoNode) => {
+            if (testNode.result && testNode.result.output && testNode.result.output.length > 0) {
+                outputChannel.show();
+                outputChannel.appendLine("");
+                outputChannel.appendLine("# " + testNode.key);
+                outputChannel.appendLine("output:");
+                outputChannel.appendLine(testNode.result.output);
+            }
+        }));
+
         context.subscriptions.push(vscode.commands.registerCommand("ginkgotestexplorer.runAllTest", this.onRunAllTests.bind(this)));
         context.subscriptions.push(vscode.commands.registerCommand('ginkgotestexplorer.GotoSymbolInEditor', this.onGotoSymbolInEditor.bind(this)));
     }
 
     private async onRunAllTests() {
-        outputChannel.appendLine('Running all test...');
         this.ginkgoTreeDataProvider.discoveredTests.
             filter(test => test.spec).
             forEach(node => this.commands.sendTestRunStarted(node));

@@ -13,6 +13,7 @@ export interface Outline {
 export interface GinkgoNode {
     // Metadata
     // Keep in sync with https://github.com/onsi/ginkgo/tree/master/ginkgo/outline
+    key: string;
     name: string;
     text: string;
     start: number;

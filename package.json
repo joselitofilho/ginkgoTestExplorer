@@ -12,6 +12,13 @@
   "engines": {
     "vscode": "^1.53.0"
   },
+  "keywords": [
+    "go",
+    "test",
+    "gotest",
+    "bdd test",
+    "ginkgo"
+  ],
   "categories": [
     "Other"
   ],
@@ -44,9 +51,23 @@
           "when": "view == ginkgotestexplorer",
           "group": "navigation@0"
         }
+      ],
+      "view/item/context": [
+        {
+          "command": "ginkgotestexplorer.showTestoutput",
+          "when": "viewItem == test"
+        }
       ]
     },
     "commands": [
+      {
+        "command": "ginkgotestexplorer.showTestoutput",
+        "title": "show output",
+        "icon": {
+          "light": "resources/light/run.png",
+          "dark": "resources/dark/run.png"
+        }
+      },
       {
         "command": "ginkgotestexplorer.runAllTest",
         "title": "Ginkgo: Run all test",
