@@ -1,9 +1,9 @@
 import * as vscode from 'vscode';
+import * as symbolPicker from './symbolPicker';
 import { GinkgoTestDiscover } from './ginkgoTestDiscover';
+import { GinkgoTestProvider } from './ginkgoTestProvider';
 import { Outliner } from './outliner';
 import { CachingOutliner } from './cachingOutliner';
-import * as symbolPicker from './symbolPicker';
-import { GinkgoTestProvider } from './ginkgoTestProvider';
 import { Commands } from './commands';
 
 const extensionName = 'ginkgotestexplorer';
@@ -44,7 +44,7 @@ export class GinkgoTestExplorer {
         if (vscode.workspace.workspaceFolders) {
             cwd = vscode.workspace.workspaceFolders[0].uri.fsPath;
         }
-        this.ginkgoTestDiscover = new GinkgoTestDiscover(getConfiguration().get('ginkgoPath', defaultGinkgoPath), cwd);
+        this.ginkgoTestDiscover = new GinkgoTestDiscover(getConfiguration().get('ginkgoPath', defaultGinkgoPath), cwd, this.commands);
 
         this.outliner = new Outliner(getConfiguration().get('ginkgoPath', defaultGinkgoPath), this.commands);
 
@@ -82,13 +82,11 @@ export class GinkgoTestExplorer {
     }
 
     private async onRunAllTests() {
+        outputChannel.appendLine('Running all test...');
         this.ginkgoTreeDataProvider.discoveredTests.
             filter(test => test.spec).
             forEach(node => this.commands.sendTestRunStarted(node));
-        const testResults = await this.ginkgoTestDiscover.runAllTests();
-        this.commands.sendTestResult(testResults);
-        outputChannel.appendLine('Running all test...');
-        outputChannel.appendLine(JSON.stringify(testResults, null, 4));
+        await this.ginkgoTestDiscover.runAllTests();
     }
 
     private async onGotoSymbolInEditor() {
