@@ -6,13 +6,17 @@ import (
 )
 
 var _ = Describe("Example", func() {
-	When("1", func() {
+	FWhen("1", func() {
 		It("1.1", func() {
+			By("1.1.1", func() {
+				Expect(1).To(Equal(2))
+			})
 
+			Expect(1).To(Equal(2))
 		})
 	})
 
-	FIt("converts map to slice", func() {
+	It("converts map to slice", func() {
 		// m := map[string]interface{}{
 		// 	"ID":    1234,
 		// 	"Name":  "Joselito",

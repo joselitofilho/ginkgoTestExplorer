@@ -10,7 +10,10 @@ import { Icons } from "../icons";
 export function iconForGinkgoNode(context: vscode.ExtensionContext, node: outliner.GinkgoNode): vscode.ThemeIcon | { light: string | vscode.Uri; dark: string | vscode.Uri } {
     if (node.spec) {
         if (node.pending) {
-            return new vscode.ThemeIcon('stop');
+            return {
+                dark: context.asAbsolutePath(path.join("resources", "dark", Icons.testClosed)),
+                light: context.asAbsolutePath(path.join("resources", "light", Icons.testClosed))
+            }
         }
         switch (node.name) {
             case 'Measure':
@@ -23,10 +26,6 @@ export function iconForGinkgoNode(context: vscode.ExtensionContext, node: outlin
                         light: context.asAbsolutePath(path.join("resources", "light", iconName))
                     }
                 }
-                // TODO: Implement when running a specific test
-                // if (node.focused) {
-                //     return new vscode.ThemeIcon('play-circle');
-                // }
                 return {
                     dark: context.asAbsolutePath(path.join("resources", "dark", Icons.test)),
                     light: context.asAbsolutePath(path.join("resources", "light", Icons.test))
