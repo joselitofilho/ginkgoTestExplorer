@@ -13,7 +13,7 @@ export function iconForGinkgoNode(context: vscode.ExtensionContext, node: outlin
             return {
                 dark: context.asAbsolutePath(path.join("resources", "dark", Icons.testClosed)),
                 light: context.asAbsolutePath(path.join("resources", "light", Icons.testClosed))
-            }
+            };
         }
         switch (node.name) {
             case 'Measure':
@@ -24,12 +24,12 @@ export function iconForGinkgoNode(context: vscode.ExtensionContext, node: outlin
                     return {
                         dark: context.asAbsolutePath(path.join("resources", "dark", iconName)),
                         light: context.asAbsolutePath(path.join("resources", "light", iconName))
-                    }
+                    };
                 }
                 return {
                     dark: context.asAbsolutePath(path.join("resources", "dark", Icons.test)),
                     light: context.asAbsolutePath(path.join("resources", "light", Icons.test))
-                }
+                };
         }
     }
 

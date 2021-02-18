@@ -18,8 +18,8 @@ export class TreeDataProvider implements vscode.TreeDataProvider<outliner.Ginkgo
 
     private editor?: vscode.TextEditor;
     private roots: outliner.GinkgoNode[] = [];
-    private __discoveredTestsMap?: Map<string, outliner.GinkgoNode>;
-    private _discoveredTests?: outliner.GinkgoNode[];
+    private discoveredTestsMap?: Map<string, outliner.GinkgoNode>;
+    private discoveredTests?: outliner.GinkgoNode[];
 
     private lastClickedNode?: outliner.GinkgoNode;
     private lastClickedTime?: number;
@@ -172,37 +172,37 @@ export class TreeDataProvider implements vscode.TreeDataProvider<outliner.Ginkgo
 
     private getNodeKey(node: outliner.GinkgoNode): string {
         if (node.name.endsWith("When")) {
-            return this.getNodeKey(node.parent) + " when " + node.text
+            return this.getNodeKey(node.parent) + " when " + node.text;
         }
         if (node.parent) {
-            return this.getNodeKey(node.parent) + " " + node.text
+            return this.getNodeKey(node.parent) + " " + node.text;
         }
         return node.text;
     }
 
     private onDicoveredTest(nodes: outliner.GinkgoNode[]) {
-        this._discoveredTests = nodes && nodes.length > 0 ? nodes : [];
-        this.__discoveredTestsMap = new Map();
-        const hasFocused = this._discoveredTests.find(node => node.focused)
-        this._discoveredTests.forEach(node => {
+        this.discoveredTests = nodes && nodes.length > 0 ? nodes : [];
+        this.discoveredTestsMap = new Map();
+        const hasFocused = this.discoveredTests.find(node => node.focused);
+        this.discoveredTests.forEach(node => {
             if (hasFocused && !node.focused) {
                 node.pending = true;
             }
             const nodeKey = this.getNodeKey(node).trim();
-			this.__discoveredTestsMap?.set(nodeKey, node);
+			this.discoveredTestsMap?.set(nodeKey, node);
 		});
     }
 
     private onTestResult(results: TestResult[]) {
         results.forEach(result => {
             const nodeName = result.testName;
-            let testNode = this.__discoveredTestsMap?.get(nodeName);
+            let testNode = this.discoveredTestsMap?.get(nodeName);
             if (testNode) {
                 testNode.spec = true;
-                testNode.result = result
+                testNode.result = result;
                 this._onDidChangeTreeData.fire(testNode);
             }
-        })
+        });
 	}
 }
 

@@ -26,6 +26,7 @@ var _ = Describe("Example", func() {
 		// Expect(slice).To(HaveLen(6))
 		Expect(1).To(Equal(2))
 	})
+
 	It("converts slice to map", func() {
 		// slice := []interface{}{"ID", 1234, "Name", "Joselito", "Email", "joselitofilhoo@gmail.com"}
 		// m := example.SliceToMap(slice)
