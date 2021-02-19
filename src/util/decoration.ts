@@ -16,23 +16,16 @@ export function iconForGinkgoNode(context: vscode.ExtensionContext, node: outlin
     }
 
     if (node.spec) {
-        if (node.pending) {
-            return {
-                dark: context.asAbsolutePath(path.join("resources", "dark", Icons.testClosed)),
-                light: context.asAbsolutePath(path.join("resources", "light", Icons.testClosed))
-            };
-        }
-
-        if (node.result && node.result.isSkipped) {
-            return {
-                dark: context.asAbsolutePath(path.join("resources", "dark", Icons.testClosed)),
-                light: context.asAbsolutePath(path.join("resources", "light", Icons.testClosed))
-            };
-        }
-        
         if (node.name === 'Measure') {
             return new vscode.ThemeIcon('dashboard');
         } else {
+            if ((node.result && node.result.isSkipped) || (node.result === undefined && !node.focused)) {
+                return {
+                    dark: context.asAbsolutePath(path.join("resources", "dark", Icons.testClosed)),
+                    light: context.asAbsolutePath(path.join("resources", "light", Icons.testClosed))
+                };
+            }
+
             let iconName = Icons.test;
             if (node.result) {
                 iconName = (node.result.isPassed) ? Icons.testPassed : Icons.testFailed;
