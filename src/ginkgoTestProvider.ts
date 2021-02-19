@@ -29,7 +29,7 @@ export class GinkgoTestProvider implements vscode.TreeDataProvider<outliner.Gink
     constructor(private readonly context: vscode.ExtensionContext, commands: Commands, private readonly outlineFromDoc: { (doc: vscode.TextDocument): Promise<outliner.Outline> }, private readonly clickTreeItemCommand: string, private updateOn: UpdateOn, private updateOnTypeDelay: number, private doubleClickThreshold: number) {
         context.subscriptions.push(commands.discoveredTest(this.onDicoveredTest, this));
         context.subscriptions.push(commands.testRunStarted(this.onTestRunStarted, this));
-        context.subscriptions.push(commands.testResult(this.onTestResult, this));
+        context.subscriptions.push(commands.testResults(this.onTestResult, this));
         context.subscriptions.push(vscode.commands.registerCommand(this.clickTreeItemCommand, async (node) => this.clickTreeItem(node)));
         context.subscriptions.push(vscode.window.onDidChangeActiveTextEditor(evt => this.onActiveEditorChanged(evt)));
         this.editor = vscode.window.activeTextEditor;
@@ -147,7 +147,7 @@ export class GinkgoTestProvider implements vscode.TreeDataProvider<outliner.Gink
             arguments: [element],
             title: ''
         };
-        treeItem.contextValue = 'test';
+        treeItem.contextValue = (element.name === 'Measure') ? 'measure' : 'test';
         return treeItem;
     }
 

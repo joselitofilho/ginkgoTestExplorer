@@ -4,16 +4,16 @@ import * as vscode from 'vscode';
 import * as cp from 'child_process';
 import * as fs from "fs";
 import * as junit2json from 'junit2json';
-import { TestResult } from './testResult';
 import { Commands } from './commands';
+import { TestResult } from './testResult';
 
 export class GinkgoTestDiscover {
 
     constructor(public ginkgoPath: string, public cwd: string, private commands: Commands) { };
 
-    public async runAllTests(): Promise<TestResult[]> {
+    public async runAllTest(spec?: string): Promise<TestResult[]> {
         let testResults: TestResult[] = [];
-        const xml = await this.callRunAllTest(this.ginkgoPath, this.cwd);
+        const xml = await this.callRunTest(this.ginkgoPath, this.cwd, spec);
         const report = await junit2json.parse(xml) as junit2json.TestSuite;
         for (const tc of report.testcase) {
             const isSkipped = tc.skipped !== undefined;
@@ -23,21 +23,25 @@ export class GinkgoTestDiscover {
                 testResults = [...testResults, new TestResult(tc.classname, tc.name, true, isSkipped)];
             }
         }
-        this.commands.sendTestResult(testResults);
+        this.commands.sendTestResults(testResults);
         return testResults;
     }
 
-    private async callRunAllTest(ginkgoPath: string, cwd: string): Promise<string> {
+    private async callRunTest(ginkgoPath: string, cwd: string, spec?: string): Promise<string> {
         return await new Promise<string>((resolve, reject) => {
+            const focus = (spec) ? `-focus "${spec}"` : "";
             const reportFile = cwd + "/ginkgo.report";
+            if (fs.existsSync(reportFile)) {
+                fs.unlinkSync(reportFile);
+            }
             const activeTerminal = vscode.window.activeTerminal;
             if (activeTerminal) {
                 activeTerminal.show();
                 activeTerminal.sendText('', true);
-                activeTerminal.sendText(`${ginkgoPath} -reportFile ${reportFile} -r ${cwd}`, true);
-                new Promise((resolve, reject) => setInterval(function () {
+                activeTerminal.sendText(`${ginkgoPath} -reportFile ${reportFile} ${focus} -r ${cwd}`, true);
+                new Promise((rresolve, rreject) => setInterval(function () {
                     if (fs.existsSync(reportFile)) {
-                        resolve(true);
+                        rresolve(true);
                     }
                 }, 1000)).then(() => {
                     // TODO: configure timeout and implements reject.
@@ -53,7 +57,9 @@ export class GinkgoTestDiscover {
 
     private readReportFile(reportFile: string): string {
         const result = fs.readFileSync(reportFile, 'utf-8');
-        fs.unlinkSync(reportFile);
+        if (fs.existsSync(reportFile)) {
+            fs.unlinkSync(reportFile);
+        }
         return result;
     }
 
