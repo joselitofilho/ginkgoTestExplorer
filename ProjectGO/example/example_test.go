@@ -6,7 +6,7 @@ import (
 )
 
 var _ = Describe("Example", func() {
-	It("works", func() {
+	FIt("works", func() {
 		By("specific job works", func() {
 			Expect(1).To(Equal(1))
 		})
