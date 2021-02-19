@@ -39,7 +39,11 @@ export function preOrder(node: GinkgoNode, f: Function): void {
 
 export class Outliner {
 
-    constructor(public ginkgoPath: string, private commands: Commands) { };
+    constructor(private ginkgoPath: string, private commands: Commands) { };
+
+    public setGinkgoPath(ginkgoPath: string) {
+        this.ginkgoPath = ginkgoPath;
+    }
 
     // fromDocument returns the ginkgo outline for the TextDocument. It calls ginkgo
     // as an external process.
