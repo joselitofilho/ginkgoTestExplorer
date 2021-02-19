@@ -77,25 +77,34 @@ export class GinkgoTestExplorer {
             }
         }));
 
-        context.subscriptions.push(vscode.commands.registerCommand("ginkgotestexplorer.showTestoutput", (testNode: GinkgoNode) => {
-            if (testNode.result && testNode.result.output && testNode.result.output.length > 0) {
-                outputChannel.show();
-                outputChannel.appendLine("");
-                outputChannel.appendLine("# " + testNode.key);
-                outputChannel.appendLine("output:");
-                outputChannel.appendLine(testNode.result.output);
-            }
-        }));
-
+        context.subscriptions.push(vscode.commands.registerCommand("ginkgotestexplorer.showTestoutput", this.onShowTestOutput.bind(this)));
+        context.subscriptions.push(vscode.commands.registerCommand("ginkgotestexplorer.runTest", this.onRunTest.bind(this)));
         context.subscriptions.push(vscode.commands.registerCommand("ginkgotestexplorer.runAllTest", this.onRunAllTests.bind(this)));
         context.subscriptions.push(vscode.commands.registerCommand('ginkgotestexplorer.GotoSymbolInEditor', this.onGotoSymbolInEditor.bind(this)));
+    }
+
+    private async onShowTestOutput(testNode: GinkgoNode) {
+        if (testNode.result && testNode.result.output && testNode.result.output.length > 0) {
+            outputChannel.show();
+            outputChannel.appendLine("");
+            outputChannel.appendLine("# " + testNode.key);
+            outputChannel.appendLine("output:");
+            outputChannel.appendLine(testNode.result.output);
+        }
+    }
+
+    private async onRunTest(testNode: GinkgoNode) {
+        this.ginkgoTreeDataProvider.discoveredTests.
+            filter(test => test.key === testNode.key && test.spec).
+            forEach(node => this.commands.sendTestRunStarted(node));
+        await this.ginkgoTestDiscover.runAllTest(testNode.key);
     }
 
     private async onRunAllTests() {
         this.ginkgoTreeDataProvider.discoveredTests.
             filter(test => test.spec).
             forEach(node => this.commands.sendTestRunStarted(node));
-        await this.ginkgoTestDiscover.runAllTests();
+        await this.ginkgoTestDiscover.runAllTest();
     }
 
     private async onGotoSymbolInEditor() {

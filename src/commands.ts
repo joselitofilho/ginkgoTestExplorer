@@ -6,7 +6,7 @@ export class Commands {
 
     private readonly onTestDiscoveryFinishedEmitter = new EventEmitter<GinkgoNode[]>();
     private readonly onTestRunStartedEmitter = new EventEmitter<GinkgoNode>();
-    private readonly onTestResultEmitter = new EventEmitter<TestResult[]>();
+    private readonly onTestResultsEmitter = new EventEmitter<TestResult[]>();
 
     public get discoveredTest(): Event<GinkgoNode[]> {
         return this.onTestDiscoveryFinishedEmitter.event;
@@ -20,10 +20,10 @@ export class Commands {
     public sendTestRunStarted(testNode: GinkgoNode) {
         this.onTestRunStartedEmitter.fire(testNode);
     }
-    public get testResult(): Event<TestResult[]> {
-        return this.onTestResultEmitter.event;
+    public get testResults(): Event<TestResult[]> {
+        return this.onTestResultsEmitter.event;
     }
-    public sendTestResult(testResults: TestResult[]) {
-        this.onTestResultEmitter.fire(testResults);
+    public sendTestResults(testResults: TestResult[]) {
+        this.onTestResultsEmitter.fire(testResults);
     }
 }
