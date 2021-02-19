@@ -20,7 +20,6 @@ export interface GinkgoNode {
     end: number;
     spec: boolean;
     focused: boolean;
-    pending: boolean;
     running: boolean;
 
     result?: TestResult;
@@ -40,13 +39,21 @@ export function preOrder(node: GinkgoNode, f: Function): void {
 
 export class Outliner {
 
-    constructor(public ginkgoPath: string, private commands: Commands) { };
+    constructor(private ginkgoPath: string, private commands: Commands) { };
+
+    public setGinkgoPath(ginkgoPath: string) {
+        this.ginkgoPath = ginkgoPath;
+    }
 
     // fromDocument returns the ginkgo outline for the TextDocument. It calls ginkgo
     // as an external process.
     public async fromDocument(doc: vscode.TextDocument): Promise<Outline> {
         const output: string = await callGinkgoOutline(this.ginkgoPath, doc);
         const outline: Outline = fromJSON(output);
+        const hasFocused = outline.flat.find(e => e.focused);
+        if (hasFocused === undefined) {
+            outline.flat.forEach(o => o.focused = true);
+        }
         this.commands.sendDiscoveredTests(outline.flat);
         return outline;
     }
