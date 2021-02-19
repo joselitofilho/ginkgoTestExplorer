@@ -70,13 +70,13 @@ export class GinkgoTestProvider implements vscode.TreeDataProvider<outliner.Gink
         this.doubleClickThreshold = Math.max(doubleClickThreshold, 0);
     }
 
-    public prepateToRunTest(node: outliner.GinkgoNode) {
+    public prepareToRunTest(node: outliner.GinkgoNode) {
         this.discoveredTests.
             filter(test => test.key === node.key).
             forEach(node => {
                 this.commands.sendTestRunStarted(node);
                 if (node.nodes.length > 0) {
-                    node.nodes.forEach(c => this.prepateToRunTest(c));
+                    node.nodes.forEach(c => this.prepareToRunTest(c));
                 }
             });
     }

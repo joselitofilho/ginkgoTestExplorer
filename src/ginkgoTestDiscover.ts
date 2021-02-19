@@ -9,7 +9,11 @@ import { TestResult } from './testResult';
 
 export class GinkgoTestDiscover {
 
-    constructor(public ginkgoPath: string, public cwd: string, private commands: Commands) { };
+    constructor(private ginkgoPath: string, public cwd: string, private commands: Commands) { };
+
+    public setGinkgoPath(ginkgoPath: string) {
+        this.ginkgoPath = ginkgoPath;
+    }
 
     public async runAllTest(spec?: string): Promise<TestResult[]> {
         let testResults: TestResult[] = [];
