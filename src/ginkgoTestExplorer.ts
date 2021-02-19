@@ -94,17 +94,15 @@ export class GinkgoTestExplorer {
     }
 
     private async onRunTest(testNode: GinkgoNode) {
-        this.ginkgoTreeDataProvider.discoveredTests.
-            filter(test => test.key === testNode.key && test.spec).
-            forEach(node => this.commands.sendTestRunStarted(node));
+        this.ginkgoTreeDataProvider.prepateToRunTest(testNode);
         await this.ginkgoTestDiscover.runAllTest(testNode.key);
     }
 
     private async onRunAllTests() {
-        this.ginkgoTreeDataProvider.discoveredTests.
-            filter(test => test.spec).
-            forEach(node => this.commands.sendTestRunStarted(node));
-        await this.ginkgoTestDiscover.runAllTest();
+        if (this.ginkgoTreeDataProvider.rootNode) {
+            this.ginkgoTreeDataProvider.prepateToRunTest(this.ginkgoTreeDataProvider.rootNode);
+            await this.ginkgoTestDiscover.runAllTest();
+        }
     }
 
     private async onGotoSymbolInEditor() {
