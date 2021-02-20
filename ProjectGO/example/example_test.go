@@ -13,6 +13,12 @@ var _ = Describe("Example", func() {
 		Expect(2).To(Equal(2))
 	})
 
+	It("works 2", func() {})
+
+	PIt("pending", func() {})
+
+	XIt("skipped", func() {})
+
 	When("something happens", func() {
 		It("does not works", func() {
 			Expect(1).To(Equal(2))

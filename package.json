@@ -7,7 +7,7 @@
     "type": "git",
     "url": "https://github.com/joselitofilho/ginkgoTestExplorer"
   },
-  "version": "0.0.4",
+  "version": "0.0.5",
   "publisher": "joselitofilho",
   "engines": {
     "vscode": "^1.53.0"
@@ -59,7 +59,7 @@
       ],
       "view/item/context": [
         {
-          "command": "ginkgotestexplorer.runTest",
+          "command": "ginkgotestexplorer.runTest.tree",
           "when": "viewItem == test"
         },
         {
@@ -69,40 +69,36 @@
     },
     "commands": [
       {
-        "command": "ginkgotestexplorer.runTest",
-        "title": "run test",
-        "icon": {
-          "light": "resources/light/run.png",
-          "dark": "resources/dark/run.png"
-        }
+        "command": "ginkgotestexplorer.runTest.tree",
+        "title": "run test"
       },
       {
-        "command": "ginkgotestexplorer.showTestoutput",
-        "title": "show output",
-        "icon": {
-          "light": "resources/light/run.png",
-          "dark": "resources/dark/run.png"
-        }
+        "command": "ginkgotestexplorer.runTest.codelens",
+        "title": "run test"
       },
       {
         "command": "ginkgotestexplorer.runAllTest",
         "title": "Ginkgo: Run all test",
         "icon": {
-          "light": "resources/light/run.png",
-          "dark": "resources/dark/run.png"
+          "light": "resources/light/run.svg",
+          "dark": "resources/dark/run.svg"
         }
       },
       {
-        "command": "ginkgotestexplorer.GotoSymbolInEditor",
-        "title": "Ginkgo: Go to symbol"
-      },
-      {
         "command": "ginkgotestexplorer.generateCoverage",
-        "title": "Generate coverage",
+        "title": "Ginkgo: Generate coverage",
         "icon": {
           "light": "resources/light/coverage.svg",
           "dark": "resources/dark/coverage.svg"
         }
+      },
+      {
+        "command": "ginkgotestexplorer.showTestoutput",
+        "title": "show output"
+      },
+      {
+        "command": "ginkgotestexplorer.gotoSymbolInEditor",
+        "title": "Ginkgo: Go to symbol"
       }
     ],
     "configuration": {
@@ -143,6 +139,11 @@
           "default": 3600000,
           "minimum": 0,
           "description": "Maximum time, in seconds, to cache the result of `ginkgo outline` for a specific document version."
+        },
+        "ginkgotestexplorer.enableCodeLens": {
+          "type": "boolean",
+          "default": true,
+          "description": "Control whether the editor shows CodeLens."
         }
       }
     }

@@ -4,11 +4,12 @@ import * as path from 'path';
 import * as symbolPicker from './symbolPicker';
 import * as ginkgoTestHelper from './ginkgoTestHelper';
 import { GinkgoTestDiscover } from './ginkgoTestDiscover';
-import { GinkgoTestProvider } from './ginkgoTestProvider';
+import { GinkgoTestTreeDataProvider } from './ginkgoTestProvider';
 import { GinkgoNode, Outliner } from './outliner';
 import { CachingOutliner } from './cachingOutliner';
 import { Commands } from './commands';
 import { TestResult } from './testResult';
+import { GinkgoRunTestCodeLensProvider } from './ginkgoRunTestCodelensProvider';
 
 const extensionName = 'ginkgotestexplorer';
 const displayName = 'Ginkgo Test Explorer';
@@ -19,6 +20,9 @@ const defaultUpdateOn = 'onType';
 const defaultUpdateOnTypeDelay = 1000;
 const defaultDoubleClickThreshold = 400;
 const defaultCacheTTL = 3600000;
+const defaultEnableCodeLens = true;
+
+const GO_MODE: vscode.DocumentFilter = { language: 'go', scheme: 'file' };
 
 export function getConfiguration(): vscode.WorkspaceConfiguration {
     return vscode.workspace.getConfiguration(extensionName);
@@ -34,7 +38,8 @@ export class GinkgoTestExplorer {
 
     private cachingOutliner: CachingOutliner;
     private ginkgoTestDiscover: GinkgoTestDiscover;
-    private ginkgoTestProvider: GinkgoTestProvider;
+    private ginkgoTestProvider: GinkgoTestTreeDataProvider;
+    private ginkgoTestCodeLensProvider: GinkgoRunTestCodeLensProvider;
     private outliner: Outliner;
 
     readonly commands: Commands;
@@ -72,7 +77,7 @@ export class GinkgoTestExplorer {
             }
         }));
 
-        this.ginkgoTestProvider = new GinkgoTestProvider(context, this.commands, doc => this.cachingOutliner.fromDocument(doc), 'ginkgotestexplorer.clickTreeItem',
+        this.ginkgoTestProvider = new GinkgoTestTreeDataProvider(context, this.commands, doc => this.cachingOutliner.fromDocument(doc), 'ginkgotestexplorer.clickTreeItem',
             getConfiguration().get('updateOn', defaultUpdateOn),
             getConfiguration().get('updateOnTypeDelay', defaultUpdateOnTypeDelay),
             getConfiguration().get('doubleClickThreshold', defaultDoubleClickThreshold),
@@ -89,12 +94,26 @@ export class GinkgoTestExplorer {
                 this.ginkgoTestProvider.setDoubleClickThreshold(getConfiguration().get('doubleClickThreshold', defaultDoubleClickThreshold));
             }
         }));
+        context.subscriptions.push(vscode.commands.registerCommand("ginkgotestexplorer.runTest.tree", this.onRunTest.bind(this)));
 
-        context.subscriptions.push(vscode.commands.registerCommand("ginkgotestexplorer.showTestoutput", this.onShowTestOutput.bind(this)));
-        context.subscriptions.push(vscode.commands.registerCommand("ginkgotestexplorer.runTest", this.onRunTest.bind(this)));
-        context.subscriptions.push(vscode.commands.registerCommand("ginkgotestexplorer.runAllTest", this.onRunAllTests.bind(this)));
-        context.subscriptions.push(vscode.commands.registerCommand('ginkgotestexplorer.GotoSymbolInEditor', this.onGotoSymbolInEditor.bind(this)));
+        this.ginkgoTestCodeLensProvider = new GinkgoRunTestCodeLensProvider(context, this.commands);
+        this.ginkgoTestCodeLensProvider.setEnabled(getConfiguration().get('enableCodeLens', defaultEnableCodeLens));
+        context.subscriptions.push(vscode.languages.registerCodeLensProvider(GO_MODE, this.ginkgoTestCodeLensProvider));
+        context.subscriptions.push(vscode.workspace.onDidChangeConfiguration(evt => {
+            if (affectsConfiguration(evt, 'enableCodeLens')) {
+                this.ginkgoTestCodeLensProvider.setEnabled(getConfiguration().get('enableCodeLens', defaultEnableCodeLens));
+            }
+        }));
+        context.subscriptions.push(vscode.commands.registerCommand("ginkgotestexplorer.runTest.codelens", (args) => {
+            if (args && args.testNode) {
+                this.onRunTest(args.testNode);
+            }
+        }));
+
         context.subscriptions.push(vscode.commands.registerCommand('ginkgotestexplorer.generateCoverage', this.onGenerateCoverage.bind(this)));
+        context.subscriptions.push(vscode.commands.registerCommand('ginkgotestexplorer.gotoSymbolInEditor', this.onGotoSymbolInEditor.bind(this)));
+        context.subscriptions.push(vscode.commands.registerCommand("ginkgotestexplorer.runAllTest", this.onRunAllTests.bind(this)));
+        context.subscriptions.push(vscode.commands.registerCommand("ginkgotestexplorer.showTestoutput", this.onShowTestOutput.bind(this)));
     }
 
     private async checkGinkgoIsInstalled(ginkgoPath: string) {

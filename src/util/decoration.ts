@@ -7,7 +7,7 @@ import { Icons } from "../icons";
 
 // iconForGinkgoNode returns the icon representation of the ginkgo node.
 // See https://code.visualstudio.com/api/references/icons-in-labels#icon-listing
-export function iconForGinkgoNode(context: vscode.ExtensionContext, node: outliner.GinkgoNode): vscode.ThemeIcon | { light: string | vscode.Uri; dark: string | vscode.Uri } {
+export function iconForGinkgoNode(context: vscode.ExtensionContext, node: outliner.GinkgoNode): { light: string | vscode.Uri; dark: string | vscode.Uri } | undefined {
     if (node.running) {
         return {
             dark: context.asAbsolutePath(path.join("resources", "dark", Icons.loading)),
@@ -17,9 +17,19 @@ export function iconForGinkgoNode(context: vscode.ExtensionContext, node: outlin
 
     if (node.spec) {
         if (node.name === 'Measure') {
-            return new vscode.ThemeIcon('dashboard');
+            return {
+                dark: context.asAbsolutePath(path.join("resources", "dark", Icons.measure)),
+                light: context.asAbsolutePath(path.join("resources", "light", Icons.measure))
+            };
         } else {
-            if ((node.result && node.result.isSkipped) || (node.result === undefined && !node.focused)) {
+            if (node.pending && !node.name.startsWith("X")) {
+                return {
+                    dark: context.asAbsolutePath(path.join("resources", "dark", Icons.testPending)),
+                    light: context.asAbsolutePath(path.join("resources", "light", Icons.testPending))
+                };
+            }
+
+            if ((node.result && node.result.isSkipped) || (node.result === undefined && !node.focused) || node.name.startsWith("X")) {
                 return {
                     dark: context.asAbsolutePath(path.join("resources", "dark", Icons.testClosed)),
                     light: context.asAbsolutePath(path.join("resources", "light", Icons.testClosed))
@@ -34,6 +44,65 @@ export function iconForGinkgoNode(context: vscode.ExtensionContext, node: outlin
                 dark: context.asAbsolutePath(path.join("resources", "dark", iconName)),
                 light: context.asAbsolutePath(path.join("resources", "light", iconName))
             };
+        }
+    }
+
+    switch (node.name) {
+        case 'BeforeEach':
+        case 'AfterEach':
+        case 'JustBeforeEach':
+        case 'JustAfterEach':
+        case 'BeforeSuite':
+        case 'AfterSuite':
+            return {
+                dark: context.asAbsolutePath(path.join("resources", "dark", Icons.wrench)),
+                light: context.asAbsolutePath(path.join("resources", "light", Icons.wrench))
+            };
+        case 'DescribeTable':
+        case 'FDescribeTable':
+        case 'PDescribeTable':
+            return {
+                dark: context.asAbsolutePath(path.join("resources", "dark", Icons.listTree)),
+                light: context.asAbsolutePath(path.join("resources", "light", Icons.listTree))
+            };
+        case 'Context':
+        case 'FContext':
+        case 'PContext':
+        case 'XContext':
+        case 'Describe':
+        case 'FDescribe':
+        case 'PDescribe':
+        case 'XDescribe':
+        case 'When':
+        case 'FWhen':
+        case 'PWhen':
+        case 'XWhen':
+            return {
+                dark: context.asAbsolutePath(path.join("resources", "dark", Icons.testSuite)),
+                light: context.asAbsolutePath(path.join("resources", "light", Icons.testSuite))
+            };
+        case 'By':
+            return {
+                dark: context.asAbsolutePath(path.join("resources", "dark", Icons.testBy)),
+                light: context.asAbsolutePath(path.join("resources", "light", Icons.testBy))
+            };
+        default:
+            return undefined;
+    }
+}
+
+export function iconForGinkgoNodeItem(node: outliner.GinkgoNode): vscode.ThemeIcon | undefined {
+    if (node.spec) {
+        if (node.name === 'Measure') {
+            return new vscode.ThemeIcon('dashboard');
+        } else {
+            if (node.pending && !node.name.startsWith("X")) {
+                return new vscode.ThemeIcon('testing-skipped-icon');
+            }
+            if (node.name.startsWith("X")) {
+                return new vscode.ThemeIcon('issue-reopened');
+            }
+            return new vscode.ThemeIcon('play');
         }
     }
 
@@ -61,11 +130,11 @@ export function iconForGinkgoNode(context: vscode.ExtensionContext, node: outlin
         case 'FWhen':
         case 'PWhen':
         case 'XWhen':
-            return new vscode.ThemeIcon('symbol-package');
+            return new vscode.ThemeIcon('test-view-icon');
         case 'By':
             return new vscode.ThemeIcon('comment');
         default:
-            return new vscode.ThemeIcon('play');
+            return undefined;
     }
 }
 
