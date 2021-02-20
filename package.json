@@ -80,8 +80,8 @@
         "command": "ginkgotestexplorer.runAllTest",
         "title": "Ginkgo: Run all test",
         "icon": {
-          "light": "resources/light/run.png",
-          "dark": "resources/dark/run.png"
+          "light": "resources/light/run.svg",
+          "dark": "resources/dark/run.svg"
         }
       },
       {
