@@ -2,6 +2,10 @@
 
 All notable changes to the "ginkgotestexplorer" extension will be documented in this file.
 
+### v0.0.4
+
+- Generate coverage.
+
 ### v0.0.3
 
 - Improves the dynamics between the nodes when running a specific test.

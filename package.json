@@ -7,7 +7,7 @@
     "type": "git",
     "url": "https://github.com/joselitofilho/ginkgoTestExplorer"
   },
-  "version": "0.0.3",
+  "version": "0.0.4",
   "publisher": "joselitofilho",
   "engines": {
     "vscode": "^1.53.0"
@@ -50,6 +50,11 @@
           "command": "ginkgotestexplorer.runAllTest",
           "when": "view == ginkgotestexplorer",
           "group": "navigation@0"
+        },
+        {
+          "command": "ginkgotestexplorer.generateCoverage",
+          "when": "view == ginkgotestexplorer",
+          "group": "navigation@1"
         }
       ],
       "view/item/context": [
@@ -90,6 +95,14 @@
       {
         "command": "ginkgotestexplorer.GotoSymbolInEditor",
         "title": "Ginkgo: Go to symbol"
+      },
+      {
+        "command": "ginkgotestexplorer.generateCoverage",
+        "title": "Generate coverage",
+        "icon": {
+          "light": "resources/light/coverage.svg",
+          "dark": "resources/dark/coverage.svg"
+        }
       }
     ],
     "configuration": {
