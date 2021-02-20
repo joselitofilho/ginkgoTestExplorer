@@ -25,7 +25,7 @@ export async function fromTextEditor(editor: vscode.TextEditor, outlineFromDoc: 
     if (editor.document.languageId !== 'go') {
         outputChannel.appendLine(`Did not populate Go To Symbol menu: document "${editor.document.uri}" language is not Go.`);
         void vscode.window.showQuickPick([]);
-        return;
+        return;'';
     }
 
     const out = await outlineFromDoc(editor.document);

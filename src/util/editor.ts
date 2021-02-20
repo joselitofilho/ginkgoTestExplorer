@@ -31,7 +31,7 @@ export function setSelectionToNodeStart(editor: vscode.TextEditor, node: outline
     editor.selection = selection;
 }
 
-function rangeFromNode(document: vscode.TextDocument, node: outliner.GinkgoNode): vscode.Range {
+export function rangeFromNode(document: vscode.TextDocument, node: outliner.GinkgoNode): vscode.Range {
     const start = document.positionAt(node.start);
     const end = document.positionAt(node.end);
     return new vscode.Range(start, end);
