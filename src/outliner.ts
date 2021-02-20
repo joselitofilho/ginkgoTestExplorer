@@ -19,6 +19,7 @@ export interface GinkgoNode {
     start: number;
     end: number;
     spec: boolean;
+    pending: boolean;
     focused: boolean;
     running: boolean;
 
@@ -50,9 +51,13 @@ export class Outliner {
     public async fromDocument(doc: vscode.TextDocument): Promise<Outline> {
         const output: string = await callGinkgoOutline(this.ginkgoPath, doc);
         const outline: Outline = fromJSON(output);
-        const hasFocused = outline.flat.find(e => e.focused);
+        const hasFocused = outline.flat.find(o => o.focused);
         if (hasFocused === undefined) {
-            outline.flat.forEach(o => o.focused = true);
+            outline.flat.forEach(o => {
+                if (!o.name.startsWith("X") || !o.pending) {
+                    o.focused = true;
+                }
+            });
         }
         this.commands.sendDiscoveredTests(outline.flat);
         return outline;
