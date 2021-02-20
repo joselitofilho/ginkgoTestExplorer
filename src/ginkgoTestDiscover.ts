@@ -3,9 +3,13 @@
 import * as vscode from 'vscode';
 import * as cp from 'child_process';
 import * as fs from "fs";
+import * as path from "path";
 import * as junit2json from 'junit2json';
 import { Commands } from './commands';
 import { TestResult } from './testResult';
+
+const coverageHTML = "coverage.html";
+const coverageOut = "coverage.out";
 
 export class GinkgoTestDiscover {
 
@@ -31,28 +35,41 @@ export class GinkgoTestDiscover {
         return testResults;
     }
 
+    public generateCoverage(): string {
+        const coverageDir = path.normalize(path.join(this.cwd, 'coverage'));
+        cp.execSync(`go tool cover -html=${coverageDir}/${coverageOut} -o ${coverageDir}/${coverageHTML}`, { cwd: this.cwd });
+        return fs.readFileSync(`${coverageDir}/${coverageHTML}`, { encoding: 'utf8' });
+    }
+
     private async callRunTest(ginkgoPath: string, cwd: string, spec?: string): Promise<string> {
-        return await new Promise<string>((resolve, reject) => {
+        return await new Promise((resolve, reject) => {
+            const coverageDir = path.normalize(path.join(cwd, 'coverage'));
+            this.prepareCoverageDir(coverageDir);
+
             const focus = (spec) ? `-focus "${spec}"` : "";
+            const cover = `-cover -coverpkg=./... -coverprofile=${coverageDir}/${coverageOut}`;
+
             const reportFile = cwd + "/ginkgo.report";
             if (fs.existsSync(reportFile)) {
                 fs.unlinkSync(reportFile);
             }
-            const activeTerminal = vscode.window.activeTerminal;
+
+            const command = `${ginkgoPath} -reportFile ${reportFile} ${focus} ${cover} -r ${cwd}`;
+
+            let activeTerminal = vscode.window.activeTerminal;
+            if (!activeTerminal) {
+                activeTerminal = vscode.window.createTerminal({ cwd });
+            }
             if (activeTerminal) {
                 activeTerminal.show();
                 activeTerminal.sendText('', true);
-                activeTerminal.sendText(`${ginkgoPath} -reportFile ${reportFile} ${focus} -r ${cwd}`, true);
-                new Promise((rresolve, rreject) => setInterval(function () {
+                activeTerminal.sendText(command, true);
+                new Promise((resolveInterval, rejectInterval) => setInterval(function () {
                     if (fs.existsSync(reportFile)) {
-                        rresolve(true);
+                        resolveInterval(true);
                     }
                 }, 1000)).then(() => {
                     // TODO: configure timeout and implements reject.
-                    return resolve(this.readReportFile(reportFile));
-                });
-            } else {
-                cp.execFile(ginkgoPath, ['-reportFile', reportFile, '-r', cwd], {}, (err, stdout, stderr) => {
                     return resolve(this.readReportFile(reportFile));
                 });
             }
@@ -65,6 +82,20 @@ export class GinkgoTestDiscover {
             fs.unlinkSync(reportFile);
         }
         return result;
+    }
+
+    private prepareCoverageDir(outputDir: string) {
+        if (!fs.existsSync(`${outputDir}`)) {
+            fs.mkdirSync(`${outputDir}`);
+        } else {
+            if (fs.existsSync(`${outputDir}/${coverageHTML}`)) {
+                fs.unlinkSync(`${outputDir}/${coverageHTML}`);
+            }
+    
+            if (fs.existsSync(`${outputDir}/${coverageOut}`)) {
+                fs.unlinkSync(`${outputDir}/${coverageOut}`);
+            }
+        }
     }
 
 }

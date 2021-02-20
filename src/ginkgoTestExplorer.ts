@@ -1,4 +1,6 @@
 import * as vscode from 'vscode';
+import * as fs from 'fs';
+import * as path from 'path';
 import * as symbolPicker from './symbolPicker';
 import * as ginkgoTestHelper from './ginkgoTestHelper';
 import { GinkgoTestDiscover } from './ginkgoTestDiscover';
@@ -6,6 +8,7 @@ import { GinkgoTestProvider } from './ginkgoTestProvider';
 import { GinkgoNode, Outliner } from './outliner';
 import { CachingOutliner } from './cachingOutliner';
 import { Commands } from './commands';
+import { TestResult } from './testResult';
 
 const extensionName = 'ginkgotestexplorer';
 const displayName = 'Ginkgo Test Explorer';
@@ -91,6 +94,7 @@ export class GinkgoTestExplorer {
         context.subscriptions.push(vscode.commands.registerCommand("ginkgotestexplorer.runTest", this.onRunTest.bind(this)));
         context.subscriptions.push(vscode.commands.registerCommand("ginkgotestexplorer.runAllTest", this.onRunAllTests.bind(this)));
         context.subscriptions.push(vscode.commands.registerCommand('ginkgotestexplorer.GotoSymbolInEditor', this.onGotoSymbolInEditor.bind(this)));
+        context.subscriptions.push(vscode.commands.registerCommand('ginkgotestexplorer.generateCoverage', this.onGenerateCoverage.bind(this)));
     }
 
     private async checkGinkgoIsInstalled(ginkgoPath: string) {
@@ -122,6 +126,7 @@ export class GinkgoTestExplorer {
 
     private async onShowTestOutput(testNode: GinkgoNode) {
         if (testNode.result && testNode.result.output && testNode.result.output.length > 0) {
+            outputChannel.clear();
             outputChannel.show();
             outputChannel.appendLine("");
             outputChannel.appendLine("# " + testNode.key);
@@ -135,11 +140,12 @@ export class GinkgoTestExplorer {
         await this.ginkgoTestDiscover.runAllTest(testNode.key);
     }
 
-    private async onRunAllTests() {
+    private async onRunAllTests(): Promise<TestResult[]> {
         if (this.ginkgoTestProvider.rootNode) {
             this.ginkgoTestProvider.prepareToRunTest(this.ginkgoTestProvider.rootNode);
-            await this.ginkgoTestDiscover.runAllTest();
+            return await this.ginkgoTestDiscover.runAllTest();
         }
+        return [];
     }
 
     private async onGotoSymbolInEditor() {
@@ -155,6 +161,22 @@ export class GinkgoTestExplorer {
             if (action === 'Open Log') {
                 outputChannel.show();
             }
+        }
+    }
+
+    private async onGenerateCoverage() {
+        outputChannel.clear();
+
+        // TODO: Check if there was an error?
+        await this.onRunAllTests();
+
+        outputChannel.appendLine('Generating coverage results...');
+        try {
+            const output = this.ginkgoTestDiscover.generateCoverage();
+            const viewPanel = vscode.window.createWebviewPanel('Coverage', 'Coverage results', { viewColumn: vscode.ViewColumn.Two, preserveFocus: true }, { enableScripts: true });
+            viewPanel.webview.html = output;
+        } catch (err) {
+            outputChannel.appendLine(`Error while generating coverage: ${err}.`);
         }
     }
 

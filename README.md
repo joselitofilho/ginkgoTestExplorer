@@ -2,7 +2,7 @@
 
 This VS Code extension offers a set of tools for the [Ginkgo Framework](https://onsi.github.io/ginkgo/).
 
-![Ginkgo Test Explorer](media/ginkgotest.gif)
+<img src="media/ginkgotest.gif"/>
 
 It is based on two other extensions:
 - [GoTestExplorer](https://github.com/ppparihar/GoTestExplorer)
