@@ -2,6 +2,10 @@
 
 All notable changes to the "ginkgotestexplorer" extension will be documented in this file.
 
+### v0.0.5
+
+- Add the `run test` code lens.
+
 ### v0.0.4
 
 - Generate coverage.
