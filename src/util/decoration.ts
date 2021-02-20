@@ -69,6 +69,47 @@ export function iconForGinkgoNode(context: vscode.ExtensionContext, node: outlin
     }
 }
 
+export function iconForGinkgoNodeItem(node: outliner.GinkgoNode): vscode.ThemeIcon | undefined {
+    if (node.spec) {
+        if (node.name === 'Measure') {
+            return new vscode.ThemeIcon('dashboard');
+        } else {
+            return new vscode.ThemeIcon('play');
+        }
+    }
+
+    switch (node.name) {
+        case 'BeforeEach':
+        case 'AfterEach':
+        case 'JustBeforeEach':
+        case 'JustAfterEach':
+        case 'BeforeSuite':
+        case 'AfterSuite':
+            return new vscode.ThemeIcon('wrench');
+        case 'DescribeTable':
+        case 'FDescribeTable':
+        case 'PDescribeTable':
+            return new vscode.ThemeIcon('list-tree');
+        case 'Context':
+        case 'FContext':
+        case 'PContext':
+        case 'XContext':
+        case 'Describe':
+        case 'FDescribe':
+        case 'PDescribe':
+        case 'XDescribe':
+        case 'When':
+        case 'FWhen':
+        case 'PWhen':
+        case 'XWhen':
+            return new vscode.ThemeIcon('symbol-package');
+        case 'By':
+            return new vscode.ThemeIcon('comment');
+        default:
+            return undefined;
+    }
+}
+
 export function labelForGinkgoNode(node: outliner.GinkgoNode): string {
     let prefix: string;
     switch (node.name) {

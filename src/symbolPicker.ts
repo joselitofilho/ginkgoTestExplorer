@@ -6,17 +6,16 @@ import * as editorUtil from './util/editor';
 import * as decorationUtil from './util/decoration';
 import { outputChannel } from './ginkgoTestExplorer';
 
-class GinkgoNodeItem implements vscode.QuickPickItem {
+class GinkgoNodeQuickPickItem implements vscode.QuickPickItem {
     label = '';
     description = '';
     detail = '';
 
     constructor(readonly node: outliner.GinkgoNode) {
-        // TODO: ???
-        // const icon = decorationUtil.iconForGinkgoNode(node);
-        // if (icon) {
-        //     this.label += `$(${icon.id}) `;
-        // }
+        const icon = decorationUtil.iconForGinkgoNodeItem(node);
+        if (icon) {
+            this.label += `$(${icon.id}) `;
+        }
         this.label += decorationUtil.labelForGinkgoNode(node);
     }
 }
@@ -25,15 +24,15 @@ export async function fromTextEditor(editor: vscode.TextEditor, outlineFromDoc: 
     if (editor.document.languageId !== 'go') {
         outputChannel.appendLine(`Did not populate Go To Symbol menu: document "${editor.document.uri}" language is not Go.`);
         void vscode.window.showQuickPick([]);
-        return;'';
+        return;
     }
 
     const out = await outlineFromDoc(editor.document);
-    const picker = vscode.window.createQuickPick<GinkgoNodeItem>();
+    const picker = vscode.window.createQuickPick<GinkgoNodeQuickPickItem>();
     const oldRange = (editor.visibleRanges.length > 0) ? editor.visibleRanges[0] : undefined;
     let didAcceptWithItem = false;
     picker.placeholder = 'Go to Ginkgo spec or container';
-    picker.items = out.flat.map(n => new GinkgoNodeItem(n));
+    picker.items = out.flat.map(n => new GinkgoNodeQuickPickItem(n));
     picker.onDidChangeActive(selection => {
         if (selection.length === 0) {
             return;
