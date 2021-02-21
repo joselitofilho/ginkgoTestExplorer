@@ -1,5 +1,5 @@
 import { EventEmitter, Event } from "vscode";
-import { GinkgoNode } from "./outliner";
+import { GinkgoNode } from "./ginkgoNode";
 import { TestResult } from "./testResult";
 
 export class Commands {

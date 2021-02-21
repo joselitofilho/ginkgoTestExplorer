@@ -3,7 +3,8 @@
 import { describe, it } from "mocha";
 import * as util from "util";
 import { expect } from "chai";
-import * as outliner from './outliner';
+import * as outliner from './ginkgoOutliner';
+import { GinkgoNode } from "./ginkgoNode";
 
 // Sample output returned by `ginkgo outline`
 // Keep in sync with https://github.com/onsi/ginkgo/tree/master/ginkgo/outline
@@ -15,7 +16,7 @@ describe('outline.fromJSON', function () {
 
         let i = 0;
         for (let n of got.nested) {
-            outliner.preOrder(n, function (n: outliner.GinkgoNode) {
+            outliner.preOrder(n, function (n: GinkgoNode) {
                 expect(n).to.equal(got.flat[i], "nested node ${util.inspect(n, false, 1)} is not in flat");
                 i++;
             });
@@ -28,7 +29,7 @@ describe('outline.fromJSON', function () {
 
         for (let tn of got.nested) {
             for (let c of tn.nodes) {
-                outliner.preOrder(c, function (n: outliner.GinkgoNode) {
+                outliner.preOrder(c, function (n: GinkgoNode) {
                     expect(n.parent.nodes).includes(n, `node ${util.inspect(n, false, 1)} is not a child of its parent, ${util.inspect(n.parent, false, 1)}`);
                 });
             }

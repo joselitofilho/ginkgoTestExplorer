@@ -2,31 +2,12 @@
 
 import * as vscode from 'vscode';
 import * as cp from 'child_process';
-import { TestResult } from './testResult';
 import { Commands } from './commands';
+import { GinkgoNode } from './ginkgoNode';
 
-export interface Outline {
+export interface GinkgoOutline {
     nested: GinkgoNode[];
     flat: GinkgoNode[];
-}
-
-export interface GinkgoNode {
-    // Metadata
-    // Keep in sync with https://github.com/onsi/ginkgo/tree/master/ginkgo/outline
-    key: string;
-    name: string;
-    text: string;
-    start: number;
-    end: number;
-    spec: boolean;
-    pending: boolean;
-    focused: boolean;
-    running: boolean;
-
-    result?: TestResult;
-
-    nodes: GinkgoNode[];
-    parent: GinkgoNode;
 }
 
 export function preOrder(node: GinkgoNode, f: Function): void {
@@ -38,7 +19,7 @@ export function preOrder(node: GinkgoNode, f: Function): void {
     }
 }
 
-export class Outliner {
+export class GinkgoOutliner {
 
     constructor(private ginkgoPath: string, private commands: Commands) { };
 
@@ -48,17 +29,9 @@ export class Outliner {
 
     // fromDocument returns the ginkgo outline for the TextDocument. It calls ginkgo
     // as an external process.
-    public async fromDocument(doc: vscode.TextDocument): Promise<Outline> {
+    public async fromDocument(doc: vscode.TextDocument): Promise<GinkgoOutline> {
         const output: string = await callGinkgoOutline(this.ginkgoPath, doc);
-        const outline: Outline = fromJSON(output);
-        const hasFocused = outline.flat.find(o => o.focused);
-        if (hasFocused === undefined) {
-            outline.flat.forEach(o => {
-                if (!o.name.startsWith("X") || !o.pending) {
-                    o.focused = true;
-                }
-            });
-        }
+        const outline: GinkgoOutline = fromJSON(output);
         this.commands.sendDiscoveredTests(outline.flat);
         return outline;
     }
@@ -99,7 +72,17 @@ export async function callGinkgoOutline(ginkgoPath: string, doc: vscode.TextDocu
     });
 }
 
-export function fromJSON(input: string): Outline {
+function getNodeKey(node: GinkgoNode): string {
+    if (node.name.endsWith("When")) {
+        return getNodeKey(node.parent) + " when " + node.text;
+    }
+    if (node.parent) {
+        return getNodeKey(node.parent) + " " + node.text;
+    }
+    return node.text;
+}
+
+export function fromJSON(input: string): GinkgoOutline {
     const nested: GinkgoNode[] = JSON.parse(input);
 
     const flat: GinkgoNode[] = [];
@@ -111,6 +94,19 @@ export function fromJSON(input: string): Outline {
             // Annotate every child with its parent
             for (let c of n.nodes) {
                 c.parent = n;
+            }
+        });
+    }
+    
+    flat.forEach(node => {
+        node.key = getNodeKey(node).trim();
+    });
+
+    const hasFocused = flat.find(o => o.focused);
+    if (hasFocused === undefined) {
+        flat.forEach(o => {
+            if (!o.name.startsWith("X") || !o.pending) {
+                o.focused = true;
             }
         });
     }

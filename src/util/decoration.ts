@@ -2,12 +2,12 @@
 
 import * as vscode from 'vscode';
 import * as path from "path";
-import * as outliner from "../outliner";
 import { Icons } from "../icons";
+import { GinkgoNode } from '../ginkgoNode';
 
 // iconForGinkgoNode returns the icon representation of the ginkgo node.
 // See https://code.visualstudio.com/api/references/icons-in-labels#icon-listing
-export function iconForGinkgoNode(context: vscode.ExtensionContext, node: outliner.GinkgoNode): { light: string | vscode.Uri; dark: string | vscode.Uri } | undefined {
+export function iconForGinkgoNode(context: vscode.ExtensionContext, node: GinkgoNode): { light: string | vscode.Uri; dark: string | vscode.Uri } | undefined {
     if (node.running) {
         return {
             dark: context.asAbsolutePath(path.join("resources", "dark", Icons.loading)),
@@ -16,35 +16,32 @@ export function iconForGinkgoNode(context: vscode.ExtensionContext, node: outlin
     }
 
     if (node.spec) {
-        if (node.name === 'Measure') {
+        if (node.pending && !node.name.startsWith("X")) {
             return {
-                dark: context.asAbsolutePath(path.join("resources", "dark", Icons.measure)),
-                light: context.asAbsolutePath(path.join("resources", "light", Icons.measure))
-            };
-        } else {
-            if (node.pending && !node.name.startsWith("X")) {
-                return {
-                    dark: context.asAbsolutePath(path.join("resources", "dark", Icons.testPending)),
-                    light: context.asAbsolutePath(path.join("resources", "light", Icons.testPending))
-                };
-            }
-
-            if ((node.result && node.result.isSkipped) || (node.result === undefined && !node.focused) || node.name.startsWith("X")) {
-                return {
-                    dark: context.asAbsolutePath(path.join("resources", "dark", Icons.testClosed)),
-                    light: context.asAbsolutePath(path.join("resources", "light", Icons.testClosed))
-                };
-            }
-
-            let iconName = Icons.test;
-            if (node.result) {
-                iconName = (node.result.isPassed) ? Icons.testPassed : Icons.testFailed;
-            }
-            return {
-                dark: context.asAbsolutePath(path.join("resources", "dark", iconName)),
-                light: context.asAbsolutePath(path.join("resources", "light", iconName))
+                dark: context.asAbsolutePath(path.join("resources", "dark", Icons.testPending)),
+                light: context.asAbsolutePath(path.join("resources", "light", Icons.testPending))
             };
         }
+
+        if ((node.result && node.result.isSkipped) || (node.result === undefined && !node.focused) || node.name.startsWith("X")) {
+            return {
+                dark: context.asAbsolutePath(path.join("resources", "dark", Icons.testClosed)),
+                light: context.asAbsolutePath(path.join("resources", "light", Icons.testClosed))
+            };
+        }
+
+        let iconName = (node.name === 'Measure') ? Icons.measure : Icons.test;
+        if (node.result) {
+            if (node.name === 'Measure') {
+                iconName = (node.result.isPassed) ? Icons.measurePassed : Icons.measureFailed;
+            } else {
+                iconName = (node.result.isPassed) ? Icons.testPassed : Icons.testFailed;
+            }
+        }
+        return {
+            dark: context.asAbsolutePath(path.join("resources", "dark", iconName)),
+            light: context.asAbsolutePath(path.join("resources", "light", iconName))
+        };
     }
 
     switch (node.name) {
@@ -91,7 +88,7 @@ export function iconForGinkgoNode(context: vscode.ExtensionContext, node: outlin
     }
 }
 
-export function iconForGinkgoNodeItem(node: outliner.GinkgoNode): vscode.ThemeIcon | undefined {
+export function iconForGinkgoNodeItem(node: GinkgoNode): vscode.ThemeIcon | undefined {
     if (node.spec) {
         if (node.name === 'Measure') {
             return new vscode.ThemeIcon('dashboard');
@@ -138,7 +135,7 @@ export function iconForGinkgoNodeItem(node: outliner.GinkgoNode): vscode.ThemeIc
     }
 }
 
-export function labelForGinkgoNode(node: outliner.GinkgoNode): string {
+export function labelForGinkgoNode(node: GinkgoNode): string {
     let prefix: string;
     switch (node.name) {
         case 'It':
