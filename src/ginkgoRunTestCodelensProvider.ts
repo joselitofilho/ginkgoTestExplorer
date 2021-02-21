@@ -3,7 +3,7 @@
 import * as vscode from 'vscode';
 import { CodeLens, Command, TextDocument } from 'vscode';
 import { Commands } from './commands';
-import { GinkgoNode } from './outliner';
+import { GinkgoNode, isRunnableTest } from './ginkgoNode';
 import { rangeFromNode } from './util/editor';
 
 export class GinkgoRunTestCodeLensProvider implements vscode.CodeLensProvider {
@@ -70,7 +70,7 @@ export class GinkgoRunTestCodeLensProvider implements vscode.CodeLensProvider {
                 };
                 const range = rangeFromNode(document, testNode);
                 codelens.push(new CodeLens(range, runTestCmd));
-            } else if (testNode.name !== 'By') { // TODO: Create a function for decision.
+            } else if (isRunnableTest(testNode)) {
                 const runTestCmd: Command = {
                     title: 'run test',
                     command: 'ginkgotestexplorer.runTest.codelens',

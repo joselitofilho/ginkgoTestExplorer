@@ -1,15 +1,13 @@
 import * as vscode from 'vscode';
-import * as fs from 'fs';
-import * as path from 'path';
 import * as symbolPicker from './symbolPicker';
-import * as ginkgoTestHelper from './ginkgoTestHelper';
-import { GinkgoTestDiscover } from './ginkgoTestDiscover';
-import { GinkgoTestTreeDataProvider } from './ginkgoTestProvider';
-import { GinkgoNode, Outliner } from './outliner';
+import { GinkgoTestTreeDataProvider } from './ginkgoTestTreeDataProvider';
+import { GinkgoOutliner } from './ginkgoOutliner';
 import { CachingOutliner } from './cachingOutliner';
 import { Commands } from './commands';
 import { TestResult } from './testResult';
 import { GinkgoRunTestCodeLensProvider } from './ginkgoRunTestCodelensProvider';
+import { GinkgoNode } from './ginkgoNode';
+import { GinkgoTest } from './ginkgoTest';
 
 const extensionName = 'ginkgotestexplorer';
 const displayName = 'Ginkgo Test Explorer';
@@ -37,10 +35,10 @@ export let outputChannel: vscode.OutputChannel;
 export class GinkgoTestExplorer {
 
     private cachingOutliner: CachingOutliner;
-    private ginkgoTestDiscover: GinkgoTestDiscover;
-    private ginkgoTestProvider: GinkgoTestTreeDataProvider;
+    private ginkgoTest: GinkgoTest;
+    private ginkgoTestTreeDataProvider: GinkgoTestTreeDataProvider;
     private ginkgoTestCodeLensProvider: GinkgoRunTestCodeLensProvider;
-    private outliner: Outliner;
+    private outliner: GinkgoOutliner;
 
     readonly commands: Commands;
     constructor(context: vscode.ExtensionContext) {
@@ -57,14 +55,14 @@ export class GinkgoTestExplorer {
         if (vscode.workspace.workspaceFolders) {
             cwd = vscode.workspace.workspaceFolders[0].uri.fsPath;
         }
-        this.ginkgoTestDiscover = new GinkgoTestDiscover(ginkgoPath, cwd, this.commands);
+        this.ginkgoTest = new GinkgoTest(ginkgoPath, cwd, this.commands);
         context.subscriptions.push(vscode.workspace.onDidChangeConfiguration(evt => {
             if (affectsConfiguration(evt, 'ginkgoPath')) {
-                this.ginkgoTestDiscover.setGinkgoPath(getConfiguration().get('ginkgoPath', defaultGinkgoPath));
+                this.ginkgoTest.setGinkgoPath(getConfiguration().get('ginkgoPath', defaultGinkgoPath));
             }
         }));
 
-        this.outliner = new Outliner(ginkgoPath, this.commands);
+        this.outliner = new GinkgoOutliner(ginkgoPath, this.commands);
         this.cachingOutliner = new CachingOutliner(this.outliner, getConfiguration().get('cacheTTL', defaultCacheTTL));
         context.subscriptions.push({ dispose: () => { this.cachingOutliner.clear(); } });
         context.subscriptions.push(vscode.workspace.onDidChangeConfiguration(evt => {
@@ -77,21 +75,21 @@ export class GinkgoTestExplorer {
             }
         }));
 
-        this.ginkgoTestProvider = new GinkgoTestTreeDataProvider(context, this.commands, doc => this.cachingOutliner.fromDocument(doc), 'ginkgotestexplorer.clickTreeItem',
+        this.ginkgoTestTreeDataProvider = new GinkgoTestTreeDataProvider(context, this.commands, doc => this.cachingOutliner.fromDocument(doc), 'ginkgotestexplorer.clickTreeItem',
             getConfiguration().get('updateOn', defaultUpdateOn),
             getConfiguration().get('updateOnTypeDelay', defaultUpdateOnTypeDelay),
             getConfiguration().get('doubleClickThreshold', defaultDoubleClickThreshold),
         );
-        context.subscriptions.push(vscode.window.registerTreeDataProvider('ginkgotestexplorer', this.ginkgoTestProvider));
+        context.subscriptions.push(vscode.window.registerTreeDataProvider('ginkgotestexplorer', this.ginkgoTestTreeDataProvider));
         context.subscriptions.push(vscode.workspace.onDidChangeConfiguration(evt => {
             if (affectsConfiguration(evt, 'updateOn')) {
-                this.ginkgoTestProvider.setUpdateOn(getConfiguration().get('updateOn', defaultUpdateOn));
+                this.ginkgoTestTreeDataProvider.setUpdateOn(getConfiguration().get('updateOn', defaultUpdateOn));
             }
             if (affectsConfiguration(evt, 'updateOnTypeDelay')) {
-                this.ginkgoTestProvider.setUpdateOnTypeDelay(getConfiguration().get('updateOnTypeDelay', defaultUpdateOnTypeDelay));
+                this.ginkgoTestTreeDataProvider.setUpdateOnTypeDelay(getConfiguration().get('updateOnTypeDelay', defaultUpdateOnTypeDelay));
             }
             if (affectsConfiguration(evt, 'doubleClickThreshold')) {
-                this.ginkgoTestProvider.setDoubleClickThreshold(getConfiguration().get('doubleClickThreshold', defaultDoubleClickThreshold));
+                this.ginkgoTestTreeDataProvider.setDoubleClickThreshold(getConfiguration().get('doubleClickThreshold', defaultDoubleClickThreshold));
             }
         }));
         context.subscriptions.push(vscode.commands.registerCommand("ginkgotestexplorer.runTest.tree", this.onRunTest.bind(this)));
@@ -117,7 +115,7 @@ export class GinkgoTestExplorer {
     }
 
     private async checkGinkgoIsInstalled(ginkgoPath: string) {
-        const isInstalled = await ginkgoTestHelper.checkGinkgoIsInstalled(ginkgoPath);
+        const isInstalled = await this.ginkgoTest.checkGinkgoIsInstalled(ginkgoPath);
         if (!isInstalled) {
             outputChannel.appendLine(`Ginkgo not found.`);
             const action = await vscode.window.showInformationMessage('Would you like to install a Ginkgo and Gomega?', ...['Yes']);
@@ -127,10 +125,10 @@ export class GinkgoTestExplorer {
                 outputChannel.appendLine('go get github.com/onsi/ginkgo/ginkgo');
                 outputChannel.appendLine('go get github.com/onsi/gomega/...');
                 outputChannel.appendLine('Please wait...');
-                let installed = await ginkgoTestHelper.callGinkgoInstall();
+                let installed = await this.ginkgoTest.callGinkgoInstall();
                 if (installed) {
                     outputChannel.appendLine('Ginkgo has been installed successfully.');
-                    installed = await ginkgoTestHelper.callGomegaInstall();
+                    installed = await this.ginkgoTest.callGomegaInstall();
                     if (installed) {
                         outputChannel.appendLine('Gomega has been installed successfully.');
                     } else {
@@ -155,14 +153,14 @@ export class GinkgoTestExplorer {
     }
 
     private async onRunTest(testNode: GinkgoNode) {
-        this.ginkgoTestProvider.prepareToRunTest(testNode);
-        await this.ginkgoTestDiscover.runAllTest(testNode.key);
+        this.ginkgoTestTreeDataProvider.prepareToRunTest(testNode);
+        await this.ginkgoTest.runAllTest(testNode.key);
     }
 
     private async onRunAllTests(): Promise<TestResult[]> {
-        if (this.ginkgoTestProvider.rootNode) {
-            this.ginkgoTestProvider.prepareToRunTest(this.ginkgoTestProvider.rootNode);
-            return await this.ginkgoTestDiscover.runAllTest();
+        if (this.ginkgoTestTreeDataProvider.rootNode) {
+            this.ginkgoTestTreeDataProvider.prepareToRunTest(this.ginkgoTestTreeDataProvider.rootNode);
+            return await this.ginkgoTest.runAllTest();
         }
         return [];
     }
@@ -191,7 +189,7 @@ export class GinkgoTestExplorer {
 
         outputChannel.appendLine('Generating coverage results...');
         try {
-            const output = this.ginkgoTestDiscover.generateCoverage();
+            const output = this.ginkgoTest.generateCoverage();
             const viewPanel = vscode.window.createWebviewPanel('Coverage', 'Coverage results', { viewColumn: vscode.ViewColumn.Two, preserveFocus: true }, { enableScripts: true });
             viewPanel.webview.html = output;
         } catch (err) {

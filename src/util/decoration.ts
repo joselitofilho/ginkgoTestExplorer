@@ -2,12 +2,12 @@
 
 import * as vscode from 'vscode';
 import * as path from "path";
-import * as outliner from "../outliner";
 import { Icons } from "../icons";
+import { GinkgoNode } from '../ginkgoNode';
 
 // iconForGinkgoNode returns the icon representation of the ginkgo node.
 // See https://code.visualstudio.com/api/references/icons-in-labels#icon-listing
-export function iconForGinkgoNode(context: vscode.ExtensionContext, node: outliner.GinkgoNode): { light: string | vscode.Uri; dark: string | vscode.Uri } | undefined {
+export function iconForGinkgoNode(context: vscode.ExtensionContext, node: GinkgoNode): { light: string | vscode.Uri; dark: string | vscode.Uri } | undefined {
     if (node.running) {
         return {
             dark: context.asAbsolutePath(path.join("resources", "dark", Icons.loading)),
@@ -91,7 +91,7 @@ export function iconForGinkgoNode(context: vscode.ExtensionContext, node: outlin
     }
 }
 
-export function iconForGinkgoNodeItem(node: outliner.GinkgoNode): vscode.ThemeIcon | undefined {
+export function iconForGinkgoNodeItem(node: GinkgoNode): vscode.ThemeIcon | undefined {
     if (node.spec) {
         if (node.name === 'Measure') {
             return new vscode.ThemeIcon('dashboard');
@@ -138,7 +138,7 @@ export function iconForGinkgoNodeItem(node: outliner.GinkgoNode): vscode.ThemeIc
     }
 }
 
-export function labelForGinkgoNode(node: outliner.GinkgoNode): string {
+export function labelForGinkgoNode(node: GinkgoNode): string {
     let prefix: string;
     switch (node.name) {
         case 'It':

@@ -11,7 +11,7 @@ import { TestResult } from './testResult';
 const coverageHTML = "coverage.html";
 const coverageOut = "coverage.out";
 
-export class GinkgoTestDiscover {
+export class GinkgoTest {
 
     constructor(private ginkgoPath: string, public cwd: string, private commands: Commands) { };
 
@@ -39,6 +39,39 @@ export class GinkgoTestDiscover {
         const coverageDir = path.normalize(path.join(this.cwd, 'coverage'));
         cp.execSync(`go tool cover -html=${coverageDir}/${coverageOut} -o ${coverageDir}/${coverageHTML}`, { cwd: this.cwd });
         return fs.readFileSync(`${coverageDir}/${coverageHTML}`, { encoding: 'utf8' });
+    }
+
+    public async checkGinkgoIsInstalled(ginkgoPath: string): Promise<boolean> {
+        return await new Promise<boolean>((resolve, reject) => {
+            cp.execFile(ginkgoPath, ['help'], {}, (err, stdout, stderr) => {
+                if (err) {
+                    return resolve(false);
+                }
+                return resolve(true);
+            });
+        });
+    }
+    
+    public async callGinkgoInstall(): Promise<boolean> {
+        return await new Promise<boolean>((resolve, reject) => {
+            cp.execFile("go", ['get', 'github.com/onsi/ginkgo/ginkgo'], {}, (err, stdout, stderr) => {
+                if (err) {
+                    return resolve(false);
+                }
+                return resolve(true);
+            });
+        });
+    }
+    
+    public async callGomegaInstall(): Promise<boolean> {
+        return await new Promise<boolean>((resolve, reject) => {
+            cp.execFile("go", ['get', 'github.com/onsi/gomega/...'], {}, (err, stdout, stderr) => {
+                if (err) {
+                    return resolve(false);
+                }
+                return resolve(true);
+            });
+        });
     }
 
     private async callRunTest(ginkgoPath: string, cwd: string, spec?: string): Promise<string> {
