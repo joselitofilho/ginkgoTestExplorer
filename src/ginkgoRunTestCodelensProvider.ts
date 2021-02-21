@@ -1,19 +1,16 @@
 'use strict';
 
 import * as vscode from 'vscode';
+import { GinkgoOutline } from './ginkgoOutliner';
 import { CodeLens, Command, TextDocument } from 'vscode';
-import { Commands } from './commands';
-import { GinkgoNode, isRootNode, isRunnableTest } from './ginkgoNode';
+import { isRunnableTest } from './ginkgoNode';
 import { rangeFromNode } from './util/editor';
 
 export class GinkgoRunTestCodeLensProvider implements vscode.CodeLensProvider {
     protected enabled: boolean = true;
     private onDidChangeCodeLensesEmitter = new vscode.EventEmitter<void>();
-    private testNodes: GinkgoNode[] = [];
 
-    constructor(context: vscode.ExtensionContext, commands: Commands) {
-        context.subscriptions.push(commands.discoveredTest(this.onDicoveredTest, this));
-    }
+    constructor(private readonly outlineFromDoc: { (doc: vscode.TextDocument): Promise<GinkgoOutline> }) { }
 
     public get onDidChangeCodeLenses(): vscode.Event<void> {
         return this.onDidChangeCodeLensesEmitter.event;
@@ -27,8 +24,7 @@ export class GinkgoRunTestCodeLensProvider implements vscode.CodeLensProvider {
     }
 
     public provideCodeLenses(
-        document: vscode.TextDocument,
-        token: vscode.CancellationToken
+        document: vscode.TextDocument
     ): vscode.ProviderResult<vscode.CodeLens[]> {
         if (!this.enabled) {
             return [];
@@ -38,7 +34,7 @@ export class GinkgoRunTestCodeLensProvider implements vscode.CodeLensProvider {
         }
 
         return Promise.all([
-            this.getCodeLensForFunctions(document, this.testNodes)
+            this.getCodeLensForFunctions(document)
         ]).then(([pkg, fns]) => {
             let res: any[] = [];
             if (pkg && Array.isArray(pkg)) {
@@ -51,15 +47,13 @@ export class GinkgoRunTestCodeLensProvider implements vscode.CodeLensProvider {
         });
     }
 
-    private onDicoveredTest(nodes: GinkgoNode[]) {
-        this.testNodes = nodes && nodes.length > 0 ? nodes : [];
-    }
-
     private async getCodeLensForFunctions(
-        document: TextDocument,
-        testNodes: GinkgoNode[],
+        document: TextDocument
     ): Promise<CodeLens[]> {
         const codelens: CodeLens[] = [];
+
+        const outline = await this.outlineFromDoc(document);
+        const testNodes = outline.flat;
 
         testNodes.forEach((testNode) => {
             if (isRunnableTest(testNode)) {

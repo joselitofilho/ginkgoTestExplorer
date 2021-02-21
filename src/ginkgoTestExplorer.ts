@@ -1,7 +1,7 @@
 import * as vscode from 'vscode';
 import * as symbolPicker from './symbolPicker';
 import { GinkgoTestTreeDataProvider } from './ginkgoTestTreeDataProvider';
-import { GinkgoOutliner } from './ginkgoOutliner';
+import { GinkgoOutline, GinkgoOutliner } from './ginkgoOutliner';
 import { CachingOutliner } from './cachingOutliner';
 import { Commands } from './commands';
 import { TestResult } from './testResult';
@@ -75,7 +75,9 @@ export class GinkgoTestExplorer {
             }
         }));
 
-        this.ginkgoTestTreeDataProvider = new GinkgoTestTreeDataProvider(context, this.commands, doc => this.cachingOutliner.fromDocument(doc), 'ginkgotestexplorer.clickTreeItem',
+        const fnOutlineFromDoc: { (doc: vscode.TextDocument): Promise<GinkgoOutline> } = doc => this.cachingOutliner.fromDocument(doc);
+
+        this.ginkgoTestTreeDataProvider = new GinkgoTestTreeDataProvider(context, this.commands, fnOutlineFromDoc, 'ginkgotestexplorer.clickTreeItem',
             getConfiguration().get('updateOn', defaultUpdateOn),
             getConfiguration().get('updateOnTypeDelay', defaultUpdateOnTypeDelay),
             getConfiguration().get('doubleClickThreshold', defaultDoubleClickThreshold),
@@ -94,8 +96,7 @@ export class GinkgoTestExplorer {
         }));
         context.subscriptions.push(vscode.commands.registerCommand("ginkgotestexplorer.runTest.tree", this.onRunTestTree.bind(this)));
 
-        this.ginkgoTestCodeLensProvider = new GinkgoRunTestCodeLensProvider(context, this.commands);
-        this.ginkgoTestCodeLensProvider.setEnabled(getConfiguration().get('enableCodeLens', defaultEnableCodeLens));
+        this.ginkgoTestCodeLensProvider = new GinkgoRunTestCodeLensProvider(fnOutlineFromDoc);
         context.subscriptions.push(vscode.languages.registerCodeLensProvider(GO_MODE, this.ginkgoTestCodeLensProvider));
         context.subscriptions.push(vscode.workspace.onDidChangeConfiguration(evt => {
             if (affectsConfiguration(evt, 'enableCodeLens')) {
@@ -107,6 +108,7 @@ export class GinkgoTestExplorer {
                 this.onRunTest(args.testNode, args.mode);
             }
         }));
+        this.ginkgoTestCodeLensProvider.setEnabled(getConfiguration().get('enableCodeLens', defaultEnableCodeLens));
 
         context.subscriptions.push(vscode.commands.registerCommand('ginkgotestexplorer.generateCoverage', this.onGenerateCoverage.bind(this)));
         context.subscriptions.push(vscode.commands.registerCommand('ginkgotestexplorer.gotoSymbolInEditor', this.onGotoSymbolInEditor.bind(this)));
