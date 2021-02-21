@@ -12,25 +12,71 @@ const coverageHTML = "coverage.html";
 const coverageOut = "coverage.out";
 
 export class GinkgoTest {
+    private cwd: string;
 
-    constructor(private ginkgoPath: string, public cwd: string, private commands: Commands) { };
+    constructor(private ginkgoPath: string, private commands: Commands, private workspaceFolder?: vscode.WorkspaceFolder) {
+        this.cwd = '';
+        if (workspaceFolder) {
+            this.cwd = workspaceFolder.uri.fsPath;
+        }
+    };
 
     public setGinkgoPath(ginkgoPath: string) {
         this.ginkgoPath = ginkgoPath;
     }
 
-    public async runAllTest(spec?: string): Promise<TestResult[]> {
-        let testResults: TestResult[] = [];
-        const xml = await this.callRunTest(this.ginkgoPath, this.cwd, spec);
-        const report = await junit2json.parse(xml) as junit2json.TestSuite;
-        for (const tc of report.testcase) {
-            const isSkipped = tc.skipped !== undefined;
-            if (tc.failure !== undefined && tc.failure.length > 0) {
-                testResults = [...testResults, new TestResult(tc.classname, tc.name, false, isSkipped, tc.failure[0].inner)];
-            } else {
-                testResults = [...testResults, new TestResult(tc.classname, tc.name, true, isSkipped)];
-            }
+    public async runTest(spec?: string): Promise<TestResult[]> {
+        const cwd = this.cwd;
+        const reportFile = this.prepareReportFile(cwd);
+        const coverageDir = this.prepareCoverageDir(cwd);
+
+        let activeTerminal = vscode.window.activeTerminal;
+        if (!activeTerminal) {
+            activeTerminal = vscode.window.createTerminal({ cwd });
         }
+        if (activeTerminal) {
+            const focus = (spec) ? `-focus "${spec}"` : "";
+            const cover = `-cover -coverpkg=./... -coverprofile=${coverageDir}/${coverageOut}`;
+            const command = `${this.ginkgoPath} -reportFile ${reportFile} ${focus} ${cover} -r ${cwd}`;
+            activeTerminal.show();
+            activeTerminal.sendText('', true);
+            activeTerminal.sendText(command, true);
+        }
+
+        const xml = await this.waitForReportFile(reportFile);
+        const testResults: TestResult[] = await this.parseTestResults(xml);
+        this.commands.sendTestResults(testResults);
+        return testResults;
+    }
+
+    public async debugTest(document?: vscode.TextDocument, spec?: string): Promise<TestResult[]> {
+        const cwd = this.cwd;
+        const reportFile = this.prepareReportFile(cwd);
+
+        let workspaceFolder = this.workspaceFolder;
+        if (document) {
+            workspaceFolder = vscode.workspace.getWorkspaceFolder(document.uri);
+        }
+
+        let debugArgs: any = [];
+        if (spec) {
+            debugArgs = ['-ginkgo.debug', '-ginkgo.reportFile', reportFile, '-ginkgo.focus', spec];
+        }
+
+        const debugConfig: vscode.DebugConfiguration = {
+            name: `Debug Test ${document?.fileName}`,
+            type: 'go',
+            request: 'launch',
+            mode: 'auto',
+            program: document?.fileName,
+            args: debugArgs,
+            // env: [],
+            // envFile: [],
+        };
+        await vscode.debug.startDebugging(workspaceFolder, debugConfig);
+
+        const xml = await this.waitForReportFile(reportFile);
+        const testResults: TestResult[] = await this.parseTestResults(xml);
         this.commands.sendTestResults(testResults);
         return testResults;
     }
@@ -51,7 +97,7 @@ export class GinkgoTest {
             });
         });
     }
-    
+
     public async callGinkgoInstall(): Promise<boolean> {
         return await new Promise<boolean>((resolve, reject) => {
             cp.execFile("go", ['get', 'github.com/onsi/ginkgo/ginkgo'], {}, (err, stdout, stderr) => {
@@ -62,7 +108,7 @@ export class GinkgoTest {
             });
         });
     }
-    
+
     public async callGomegaInstall(): Promise<boolean> {
         return await new Promise<boolean>((resolve, reject) => {
             cp.execFile("go", ['get', 'github.com/onsi/gomega/...'], {}, (err, stdout, stderr) => {
@@ -74,38 +120,14 @@ export class GinkgoTest {
         });
     }
 
-    private async callRunTest(ginkgoPath: string, cwd: string, spec?: string): Promise<string> {
-        return await new Promise((resolve, reject) => {
-            const coverageDir = path.normalize(path.join(cwd, 'coverage'));
-            this.prepareCoverageDir(coverageDir);
-
-            const focus = (spec) ? `-focus "${spec}"` : "";
-            const cover = `-cover -coverpkg=./... -coverprofile=${coverageDir}/${coverageOut}`;
-
-            const reportFile = cwd + "/ginkgo.report";
+    private async waitForReportFile(reportFile: string): Promise<string> {
+        return await new Promise((resolveInterval, rejectInterval) => setInterval(function () {
             if (fs.existsSync(reportFile)) {
-                fs.unlinkSync(reportFile);
+                resolveInterval(true);
             }
-
-            const command = `${ginkgoPath} -reportFile ${reportFile} ${focus} ${cover} -r ${cwd}`;
-
-            let activeTerminal = vscode.window.activeTerminal;
-            if (!activeTerminal) {
-                activeTerminal = vscode.window.createTerminal({ cwd });
-            }
-            if (activeTerminal) {
-                activeTerminal.show();
-                activeTerminal.sendText('', true);
-                activeTerminal.sendText(command, true);
-                new Promise((resolveInterval, rejectInterval) => setInterval(function () {
-                    if (fs.existsSync(reportFile)) {
-                        resolveInterval(true);
-                    }
-                }, 1000)).then(() => {
-                    // TODO: configure timeout and implements reject.
-                    return resolve(this.readReportFile(reportFile));
-                });
-            }
+        }, 1000)).then(() => {
+            // TODO: configure timeout and implements reject.
+            return this.readReportFile(reportFile);
         });
     }
 
@@ -117,18 +139,44 @@ export class GinkgoTest {
         return result;
     }
 
-    private prepareCoverageDir(outputDir: string) {
-        if (!fs.existsSync(`${outputDir}`)) {
-            fs.mkdirSync(`${outputDir}`);
-        } else {
-            if (fs.existsSync(`${outputDir}/${coverageHTML}`)) {
-                fs.unlinkSync(`${outputDir}/${coverageHTML}`);
-            }
-    
-            if (fs.existsSync(`${outputDir}/${coverageOut}`)) {
-                fs.unlinkSync(`${outputDir}/${coverageOut}`);
+    private async parseTestResults(xml: string) {
+        let testResults: TestResult[] = [];
+        const report = await junit2json.parse(xml) as junit2json.TestSuite;
+        for (const tc of report.testcase) {
+            const isSkipped = tc.skipped !== undefined;
+            if (tc.failure !== undefined && tc.failure.length > 0) {
+                testResults = [...testResults, new TestResult(tc.classname, tc.name, false, isSkipped, tc.failure[0].inner)];
+            } else {
+                testResults = [...testResults, new TestResult(tc.classname, tc.name, true, isSkipped)];
             }
         }
+        return testResults;
+    }
+
+    private prepareReportFile(cwd: string): string {
+        const reportFile = cwd + "/ginkgo.report";
+        if (fs.existsSync(reportFile)) {
+            fs.unlinkSync(reportFile);
+        }
+        return reportFile;
+    }
+
+    private prepareCoverageDir(outputDir: string): string {
+        const coverageDir = path.normalize(path.join(outputDir, 'coverage'));
+
+        if (!fs.existsSync(`${coverageDir}`)) {
+            fs.mkdirSync(`${coverageDir}`);
+        } else {
+            if (fs.existsSync(`${coverageDir}/${coverageHTML}`)) {
+                fs.unlinkSync(`${coverageDir}/${coverageHTML}`);
+            }
+
+            if (fs.existsSync(`${coverageDir}/${coverageOut}`)) {
+                fs.unlinkSync(`${coverageDir}/${coverageOut}`);
+            }
+        }
+
+        return coverageDir;
     }
 
 }

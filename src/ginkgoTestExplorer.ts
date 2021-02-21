@@ -51,11 +51,11 @@ export class GinkgoTestExplorer {
 
         this.checkGinkgoIsInstalled(ginkgoPath);
 
-        let cwd = "";
+        let workspaceFolder: vscode.WorkspaceFolder | undefined;
         if (vscode.workspace.workspaceFolders) {
-            cwd = vscode.workspace.workspaceFolders[0].uri.fsPath;
+            workspaceFolder = vscode.workspace.workspaceFolders[0];
         }
-        this.ginkgoTest = new GinkgoTest(ginkgoPath, cwd, this.commands);
+        this.ginkgoTest = new GinkgoTest(ginkgoPath, this.commands, workspaceFolder);
         context.subscriptions.push(vscode.workspace.onDidChangeConfiguration(evt => {
             if (affectsConfiguration(evt, 'ginkgoPath')) {
                 this.ginkgoTest.setGinkgoPath(getConfiguration().get('ginkgoPath', defaultGinkgoPath));
@@ -92,7 +92,7 @@ export class GinkgoTestExplorer {
                 this.ginkgoTestTreeDataProvider.setDoubleClickThreshold(getConfiguration().get('doubleClickThreshold', defaultDoubleClickThreshold));
             }
         }));
-        context.subscriptions.push(vscode.commands.registerCommand("ginkgotestexplorer.runTest.tree", this.onRunTest.bind(this)));
+        context.subscriptions.push(vscode.commands.registerCommand("ginkgotestexplorer.runTest.tree", this.onRunTestTree.bind(this)));
 
         this.ginkgoTestCodeLensProvider = new GinkgoRunTestCodeLensProvider(context, this.commands);
         this.ginkgoTestCodeLensProvider.setEnabled(getConfiguration().get('enableCodeLens', defaultEnableCodeLens));
@@ -103,8 +103,8 @@ export class GinkgoTestExplorer {
             }
         }));
         context.subscriptions.push(vscode.commands.registerCommand("ginkgotestexplorer.runTest.codelens", (args) => {
-            if (args && args.testNode) {
-                this.onRunTest(args.testNode);
+            if (args && args.testNode && args.mode) {
+                this.onRunTest(args.testNode, args.mode);
             }
         }));
 
@@ -152,15 +152,28 @@ export class GinkgoTestExplorer {
         }
     }
 
-    private async onRunTest(testNode: GinkgoNode) {
+    private async onRunTestTree(testNode: GinkgoNode) {
+        await this.onRunTest(testNode, 'run');
+    }
+
+    private async onRunTest(testNode: GinkgoNode, mode: string) {
         this.ginkgoTestTreeDataProvider.prepareToRunTest(testNode);
-        await this.ginkgoTest.runAllTest(testNode.key);
+
+        switch (mode) {
+            case 'run':
+                await this.ginkgoTest.runTest(testNode.key);
+                break;
+            case 'debug':
+                const editor = vscode.window.activeTextEditor;
+                await this.ginkgoTest.debugTest(editor?.document, testNode.key);
+                break;
+        }
     }
 
     private async onRunAllTests(): Promise<TestResult[]> {
         if (this.ginkgoTestTreeDataProvider.rootNode) {
             this.ginkgoTestTreeDataProvider.prepareToRunTest(this.ginkgoTestTreeDataProvider.rootNode);
-            return await this.ginkgoTest.runAllTest();
+            return await this.ginkgoTest.runTest();
         }
         return [];
     }

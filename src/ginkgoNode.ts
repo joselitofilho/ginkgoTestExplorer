@@ -19,6 +19,10 @@ export interface GinkgoNode {
     parent: GinkgoNode;
 }
 
+export function isRootNode(node: GinkgoNode): boolean {
+    return node.parent === undefined && node.nodes.length > 0;
+}
+
 export function isRunnableTest(node: GinkgoNode): boolean {
     return node.name !== 'By' && !node.pending;
 }
