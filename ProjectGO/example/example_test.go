@@ -21,7 +21,7 @@ var _ = Describe("Example", func() {
 
 	When("something happens", func() {
 		It("does not works", func() {
-			Expect(1).To(Equal(2))
+			Expect(1).To(Equal(1))
 		})
 	})
 

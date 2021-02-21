@@ -6,7 +6,13 @@ export class Icons {
         return "spinner.svg";
     }
     public static get measure(): string {
-        return "speedometer.svg";
+        return "measure.svg";
+    }
+    public static get measurePassed(): string {
+        return "measurePassed.svg";
+    }
+    public static get measureFailed(): string {
+        return "measureFailed.svg";
     }
     public static get wrench(): string {
         return "wrench.svg";
