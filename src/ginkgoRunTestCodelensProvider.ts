@@ -1,19 +1,16 @@
 'use strict';
 
 import * as vscode from 'vscode';
+import { GinkgoOutline } from './ginkgoOutliner';
 import { CodeLens, Command, TextDocument } from 'vscode';
-import { Commands } from './commands';
-import { GinkgoNode } from './outliner';
+import { isRunnableTest } from './ginkgoNode';
 import { rangeFromNode } from './util/editor';
 
 export class GinkgoRunTestCodeLensProvider implements vscode.CodeLensProvider {
     protected enabled: boolean = true;
     private onDidChangeCodeLensesEmitter = new vscode.EventEmitter<void>();
-    private testNodes: GinkgoNode[] = [];
 
-    constructor(context: vscode.ExtensionContext, commands: Commands) {
-        context.subscriptions.push(commands.discoveredTest(this.onDicoveredTest, this));
-    }
+    constructor(private readonly outlineFromDoc: { (doc: vscode.TextDocument): Promise<GinkgoOutline> }) { }
 
     public get onDidChangeCodeLenses(): vscode.Event<void> {
         return this.onDidChangeCodeLensesEmitter.event;
@@ -27,8 +24,7 @@ export class GinkgoRunTestCodeLensProvider implements vscode.CodeLensProvider {
     }
 
     public provideCodeLenses(
-        document: vscode.TextDocument,
-        token: vscode.CancellationToken
+        document: vscode.TextDocument
     ): vscode.ProviderResult<vscode.CodeLens[]> {
         if (!this.enabled) {
             return [];
@@ -38,7 +34,7 @@ export class GinkgoRunTestCodeLensProvider implements vscode.CodeLensProvider {
         }
 
         return Promise.all([
-            this.getCodeLensForFunctions(document, this.testNodes)
+            this.getCodeLensForFunctions(document)
         ]).then(([pkg, fns]) => {
             let res: any[] = [];
             if (pkg && Array.isArray(pkg)) {
@@ -51,33 +47,31 @@ export class GinkgoRunTestCodeLensProvider implements vscode.CodeLensProvider {
         });
     }
 
-    private onDicoveredTest(nodes: GinkgoNode[]) {
-        this.testNodes = nodes && nodes.length > 0 ? nodes : [];
-    }
-
     private async getCodeLensForFunctions(
-        document: TextDocument,
-        testNodes: GinkgoNode[],
+        document: TextDocument
     ): Promise<CodeLens[]> {
         const codelens: CodeLens[] = [];
 
+        const outline = await this.outlineFromDoc(document);
+        const testNodes = outline.flat;
+
         testNodes.forEach((testNode) => {
-            // TODO: Create a function for checking.
-            if (testNode.parent === undefined && testNode.nodes.length > 0) {
-                const runTestCmd: Command = {
-                    title: 'run test',
-                    command: 'ginkgotestexplorer.runAllTest',
-                };
+            if (isRunnableTest(testNode)) {
                 const range = rangeFromNode(document, testNode);
-                codelens.push(new CodeLens(range, runTestCmd));
-            } else if (testNode.name !== 'By') { // TODO: Create a function for decision.
+
                 const runTestCmd: Command = {
                     title: 'run test',
                     command: 'ginkgotestexplorer.runTest.codelens',
-                    arguments: [{ testNode }]
+                    arguments: [{ testNode, 'mode': 'run' }]
                 };
-                const range = rangeFromNode(document, testNode);
                 codelens.push(new CodeLens(range, runTestCmd));
+
+                const debugTestCmd: Command = {
+                    title: 'debug test',
+                    command: 'ginkgotestexplorer.runTest.codelens',
+                    arguments: [{ testNode, 'mode': 'debug' }]
+                };
+                codelens.push(new CodeLens(range, debugTestCmd));
             }
         });
 

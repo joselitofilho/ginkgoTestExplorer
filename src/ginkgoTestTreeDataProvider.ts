@@ -1,33 +1,35 @@
 'use strict';
 
 import * as vscode from 'vscode';
-import * as outliner from './outliner';
+import * as outliner from './ginkgoOutliner';
 import * as editorUtil from './util/editor';
 import * as decorationUtil from './util/decoration';
 import { Commands } from './commands';
 import { outputChannel } from './ginkgoTestExplorer';
 import { TestResult } from './testResult';
+import { GinkgoNode, isRootNode, isRunnableTest } from './ginkgoNode';
+import { GO_MODE } from './ginkgoTestExplorer';
 
 type UpdateOn = 'onSave' | 'onType';
-export class GinkgoTestTreeDataProvider implements vscode.TreeDataProvider<outliner.GinkgoNode> {
+export class GinkgoTestTreeDataProvider implements vscode.TreeDataProvider<GinkgoNode> {
 
-    private readonly _onDidChangeTreeData: vscode.EventEmitter<outliner.GinkgoNode | undefined> = new vscode.EventEmitter<outliner.GinkgoNode | undefined>();
-    readonly onDidChangeTreeData: vscode.Event<outliner.GinkgoNode | undefined> = this._onDidChangeTreeData.event;
+    private readonly _onDidChangeTreeData: vscode.EventEmitter<GinkgoNode | undefined> = new vscode.EventEmitter<GinkgoNode | undefined>();
+    readonly onDidChangeTreeData: vscode.Event<GinkgoNode | undefined> = this._onDidChangeTreeData.event;
 
     private updateListener?: vscode.Disposable;
 
     private editor?: vscode.TextEditor;
-    private roots: outliner.GinkgoNode[] = [];
-    private discoveredTestsMap: Map<string, outliner.GinkgoNode>;
-    private _discoveredTests: outliner.GinkgoNode[];
-    private _rootNode?: outliner.GinkgoNode;
+    private roots: GinkgoNode[] = [];
+    private discoveredTestsMap: Map<string, GinkgoNode>;
+    private _discoveredTests: GinkgoNode[];
+    private _rootNode?: GinkgoNode;
 
-    private lastClickedNode?: outliner.GinkgoNode;
+    private lastClickedNode?: GinkgoNode;
     private lastClickedTime?: number;
 
     private documentChangedTimer?: NodeJS.Timeout;
 
-    constructor(private context: vscode.ExtensionContext, private commands: Commands, private readonly outlineFromDoc: { (doc: vscode.TextDocument): Promise<outliner.Outline> }, private readonly clickTreeItemCommand: string, private updateOn: UpdateOn, private updateOnTypeDelay: number, private doubleClickThreshold: number) {
+    constructor(private context: vscode.ExtensionContext, private commands: Commands, private readonly outlineFromDoc: { (doc: vscode.TextDocument): Promise<outliner.GinkgoOutline> }, private readonly clickTreeItemCommand: string, private updateOn: UpdateOn, private updateOnTypeDelay: number, private doubleClickThreshold: number) {
         context.subscriptions.push(commands.discoveredTest(this.onDicoveredTest, this));
         context.subscriptions.push(commands.testRunStarted(this.onTestRunStarted, this));
         context.subscriptions.push(commands.testResults(this.onTestResult, this));
@@ -36,15 +38,15 @@ export class GinkgoTestTreeDataProvider implements vscode.TreeDataProvider<outli
         this.editor = vscode.window.activeTextEditor;
         this.setUpdateOn(this.updateOn);
         this.setUpdateOnTypeDelay(this.updateOnTypeDelay);
-        this.discoveredTestsMap = new Map<string, outliner.GinkgoNode>();
+        this.discoveredTestsMap = new Map<string, GinkgoNode>();
         this._discoveredTests = [];
     }
 
-    get discoveredTests(): outliner.GinkgoNode[] {
+    get discoveredTests(): GinkgoNode[] {
         return this._discoveredTests;
     }
 
-    get rootNode(): outliner.GinkgoNode | undefined {
+    get rootNode(): GinkgoNode | undefined {
         return this._rootNode;
     }
 
@@ -70,7 +72,7 @@ export class GinkgoTestTreeDataProvider implements vscode.TreeDataProvider<outli
         this.doubleClickThreshold = Math.max(doubleClickThreshold, 0);
     }
 
-    public prepareToRunTest(node: outliner.GinkgoNode) {
+    public prepareToRunTest(node: GinkgoNode) {
         this.discoveredTests.
             filter(test => test.key === node.key).
             forEach(node => {
@@ -124,11 +126,11 @@ export class GinkgoTestTreeDataProvider implements vscode.TreeDataProvider<outli
         this._onDidChangeTreeData.fire(undefined);
     }
 
-    async getChildren(element?: outliner.GinkgoNode | undefined): Promise<outliner.GinkgoNode[] | undefined> {
+    async getChildren(element?: GinkgoNode | undefined): Promise<GinkgoNode[] | undefined> {
         if (!this.editor) {
             return undefined;
         }
-        if (this.editor.document.languageId !== 'go') {
+        if (this.editor.document.languageId !== GO_MODE.language) {
             outputChannel.appendLine(`Did not populate outline view: document "${this.editor.document.uri}" language is not Go.`);
             return undefined;
         }
@@ -153,26 +155,25 @@ export class GinkgoTestTreeDataProvider implements vscode.TreeDataProvider<outli
         return element.nodes;
     }
 
-    getTreeItem(element: outliner.GinkgoNode): vscode.TreeItem {
-        const label = decorationUtil.labelForGinkgoNode(element);
-        const collapsibleState: vscode.TreeItemCollapsibleState = element.nodes.length > 0 ? vscode.TreeItemCollapsibleState.Expanded : vscode.TreeItemCollapsibleState.None;
+    getTreeItem(testNode: GinkgoNode): vscode.TreeItem {
+        const label = decorationUtil.labelForGinkgoNode(testNode);
+        const collapsibleState: vscode.TreeItemCollapsibleState = testNode.nodes.length > 0 ? vscode.TreeItemCollapsibleState.Expanded : vscode.TreeItemCollapsibleState.None;
         const treeItem = new vscode.TreeItem(label, collapsibleState);
-        treeItem.iconPath = decorationUtil.iconForGinkgoNode(this.context, element);
-        treeItem.tooltip = tooltipForGinkgoNode(element);
+        treeItem.iconPath = decorationUtil.iconForGinkgoNode(this.context, testNode);
+        treeItem.tooltip = tooltipForGinkgoNode(testNode);
         treeItem.command = {
             command: this.clickTreeItemCommand,
-            arguments: [element],
+            arguments: [testNode],
             title: ''
         };
-        // TODO: Create a function for decision.
-        treeItem.contextValue = (element.name !== 'By') ? 'test' : '';
+        treeItem.contextValue = isRunnableTest(testNode) ? 'test' : '';
         return treeItem;
     }
 
     // clickTreeItem is a workaround for the TreeView only supporting only one "click" command.
     // It is inspired by https://github.com/fernandoescolar/vscode-solution-explorer/blob/master/src/commands/OpenFileCommand.ts,
     // which was discovered in https://github.com/microsoft/vscode/issues/39601#issuecomment-376415352.
-    async clickTreeItem(element: outliner.GinkgoNode) {
+    async clickTreeItem(element: GinkgoNode) {
         if (!this.editor) {
             return;
         }
@@ -195,27 +196,16 @@ export class GinkgoTestTreeDataProvider implements vscode.TreeDataProvider<outli
         void vscode.commands.executeCommand('workbench.action.focusActiveEditorGroup');
     }
 
-    private getNodeKey(node: outliner.GinkgoNode): string {
-        if (node.name.endsWith("When")) {
-            return this.getNodeKey(node.parent) + " when " + node.text;
-        }
-        if (node.parent) {
-            return this.getNodeKey(node.parent) + " " + node.text;
-        }
-        return node.text;
-    }
-
-    private onDicoveredTest(nodes: outliner.GinkgoNode[]) {
-        this._rootNode = nodes.find(n => n.parent === undefined && n.nodes.length > 0);
+    private onDicoveredTest(nodes: GinkgoNode[]) {
+        this._rootNode = nodes.find(n => isRootNode(n));
         this._discoveredTests = nodes && nodes.length > 0 ? nodes : [];
         this.discoveredTestsMap = new Map();
         this._discoveredTests.forEach(node => {
-            node.key = this.getNodeKey(node).trim();
             this.discoveredTestsMap.set(node.key, node);
         });
     }
 
-    private onTestRunStarted(testNode: outliner.GinkgoNode) {
+    private onTestRunStarted(testNode: GinkgoNode) {
         testNode.running = true;
         this._onDidChangeTreeData.fire(testNode);
     }
@@ -241,13 +231,13 @@ export class GinkgoTestTreeDataProvider implements vscode.TreeDataProvider<outli
     }
 }
 
-function wasRecentlyClicked(threshold: number, lastClickedNode: outliner.GinkgoNode, lastClickedTime: number, currentNode: outliner.GinkgoNode, currentTime: number): boolean {
+function wasRecentlyClicked(threshold: number, lastClickedNode: GinkgoNode, lastClickedTime: number, currentNode: GinkgoNode, currentTime: number): boolean {
     const isSameNode = lastClickedNode.start === currentNode.start && lastClickedNode.end === currentNode.end;
     const wasRecentlyClicked = (currentTime - lastClickedTime) < threshold;
     return isSameNode && wasRecentlyClicked;
 }
 
-function tooltipForGinkgoNode(element: outliner.GinkgoNode): vscode.MarkdownString {
+function tooltipForGinkgoNode(element: GinkgoNode): vscode.MarkdownString {
     let result: string = "-";
     if (element.result) {
         result = (element.result.isPassed) ? "passed" : (element.result.output) ? "\n\n" + element.result.output : "not passed";
