@@ -7,7 +7,7 @@ import * as decorationUtil from './util/decoration';
 import { Commands } from './commands';
 import { outputChannel } from './ginkgoTestExplorer';
 import { TestResult } from './testResult';
-import { GinkgoNode, isRunnableTest } from './ginkgoNode';
+import { GinkgoNode, isRootNode, isRunnableTest } from './ginkgoNode';
 import { GO_MODE } from './ginkgoTestExplorer';
 
 type UpdateOn = 'onSave' | 'onType';
@@ -197,7 +197,7 @@ export class GinkgoTestTreeDataProvider implements vscode.TreeDataProvider<Ginkg
     }
 
     private onDicoveredTest(nodes: GinkgoNode[]) {
-        this._rootNode = nodes.find(n => n.parent === undefined && n.nodes.length > 0);
+        this._rootNode = nodes.find(n => isRootNode(n));
         this._discoveredTests = nodes && nodes.length > 0 ? nodes : [];
         this.discoveredTestsMap = new Map();
         this._discoveredTests.forEach(node => {

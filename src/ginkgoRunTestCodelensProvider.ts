@@ -3,7 +3,7 @@
 import * as vscode from 'vscode';
 import { CodeLens, Command, TextDocument } from 'vscode';
 import { Commands } from './commands';
-import { GinkgoNode, isRunnableTest } from './ginkgoNode';
+import { GinkgoNode, isRootNode, isRunnableTest } from './ginkgoNode';
 import { rangeFromNode } from './util/editor';
 
 export class GinkgoRunTestCodeLensProvider implements vscode.CodeLensProvider {
@@ -62,22 +62,22 @@ export class GinkgoRunTestCodeLensProvider implements vscode.CodeLensProvider {
         const codelens: CodeLens[] = [];
 
         testNodes.forEach((testNode) => {
-            // TODO: Create a function for checking.
-            if (testNode.parent === undefined && testNode.nodes.length > 0) {
-                const runTestCmd: Command = {
-                    title: 'run test',
-                    command: 'ginkgotestexplorer.runAllTest',
-                };
+            if (isRunnableTest(testNode)) {
                 const range = rangeFromNode(document, testNode);
-                codelens.push(new CodeLens(range, runTestCmd));
-            } else if (isRunnableTest(testNode)) {
+
                 const runTestCmd: Command = {
                     title: 'run test',
                     command: 'ginkgotestexplorer.runTest.codelens',
-                    arguments: [{ testNode }]
+                    arguments: [{ testNode, 'mode': 'run' }]
                 };
-                const range = rangeFromNode(document, testNode);
                 codelens.push(new CodeLens(range, runTestCmd));
+
+                const debugTestCmd: Command = {
+                    title: 'debug test',
+                    command: 'ginkgotestexplorer.runTest.codelens',
+                    arguments: [{ testNode, 'mode': 'debug' }]
+                };
+                codelens.push(new CodeLens(range, debugTestCmd));
             }
         });
 
