@@ -8,6 +8,7 @@ import { Commands } from './commands';
 import { outputChannel } from './ginkgoTestExplorer';
 import { TestResult } from './testResult';
 import { GinkgoNode, isRunnableTest } from './ginkgoNode';
+import { GO_MODE } from './ginkgoTestExplorer';
 
 type UpdateOn = 'onSave' | 'onType';
 export class GinkgoTestTreeDataProvider implements vscode.TreeDataProvider<GinkgoNode> {
@@ -129,7 +130,7 @@ export class GinkgoTestTreeDataProvider implements vscode.TreeDataProvider<Ginkg
         if (!this.editor) {
             return undefined;
         }
-        if (this.editor.document.languageId !== 'go') {
+        if (this.editor.document.languageId !== GO_MODE.language) {
             outputChannel.appendLine(`Did not populate outline view: document "${this.editor.document.uri}" language is not Go.`);
             return undefined;
         }
