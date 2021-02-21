@@ -4,7 +4,7 @@ import * as vscode from 'vscode';
 import * as outliner from './ginkgoOutliner';
 import * as editorUtil from './util/editor';
 import * as decorationUtil from './util/decoration';
-import { outputChannel } from './ginkgoTestExplorer';
+import { GO_MODE, outputChannel } from './ginkgoTestExplorer';
 import { GinkgoNode } from './ginkgoNode';
 
 class GinkgoNodeQuickPickItem implements vscode.QuickPickItem {
@@ -22,7 +22,7 @@ class GinkgoNodeQuickPickItem implements vscode.QuickPickItem {
 }
 
 export async function fromTextEditor(editor: vscode.TextEditor, outlineFromDoc: { (doc: vscode.TextDocument): Promise<outliner.GinkgoOutline> }) {
-    if (editor.document.languageId !== 'go') {
+    if (editor.document.languageId !== GO_MODE.language) {
         outputChannel.appendLine(`Did not populate Go To Symbol menu: document "${editor.document.uri}" language is not Go.`);
         void vscode.window.showQuickPick([]);
         return;

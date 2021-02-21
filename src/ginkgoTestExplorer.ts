@@ -20,7 +20,7 @@ const defaultDoubleClickThreshold = 400;
 const defaultCacheTTL = 3600000;
 const defaultEnableCodeLens = true;
 
-const GO_MODE: vscode.DocumentFilter = { language: 'go', scheme: 'file' };
+export const GO_MODE: vscode.DocumentFilter = { language: 'go', scheme: 'file' };
 
 export function getConfiguration(): vscode.WorkspaceConfiguration {
     return vscode.workspace.getConfiguration(extensionName);
