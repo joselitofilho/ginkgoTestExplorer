@@ -1,12 +1,12 @@
 'use strict';
 
 import * as vscode from 'vscode';
-import * as outliner from './outliner';
+import * as outliner from './ginkgoOutliner';
 import { outputChannel } from './ginkgoTestExplorer';
 
 interface CacheValue {
     docVersion: number,
-    outline: outliner.Outline,
+    outline: outliner.GinkgoOutline,
     timeout?: NodeJS.Timeout,
 }
 
@@ -14,9 +14,9 @@ export class CachingOutliner {
 
     private docToOutlineMap: Map<string, CacheValue> = new Map();
 
-    constructor(private outliner: outliner.Outliner, private cacheTTL: number) { };
+    constructor(private outliner: outliner.GinkgoOutliner, private cacheTTL: number) { };
 
-    public setOutliner(outliner: outliner.Outliner) {
+    public setOutliner(outliner: outliner.GinkgoOutliner) {
         this.outliner = outliner;
         this.docToOutlineMap.clear();
     }
@@ -35,7 +35,7 @@ export class CachingOutliner {
         this.docToOutlineMap.clear();
     }
 
-    public async fromDocument(doc: vscode.TextDocument): Promise<outliner.Outline> {
+    public async fromDocument(doc: vscode.TextDocument): Promise<outliner.GinkgoOutline> {
         const key = doc.uri.toString();
         let val = this.docToOutlineMap.get(key);
         if (!val || val.docVersion !== doc.version) {
