@@ -2,6 +2,10 @@
 
 All notable changes to the "ginkgotestexplorer" extension will be documented in this file.
 
+### v0.0.7
+
+- Fix running when there are BeforeSuite, BeforeEach, AfterSuite and AfterEach nodes.
+
 ### v0.0.6
 
 - Add the `debug test` code lens.

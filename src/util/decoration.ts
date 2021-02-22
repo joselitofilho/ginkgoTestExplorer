@@ -3,7 +3,7 @@
 import * as vscode from 'vscode';
 import * as path from "path";
 import { Icons } from "../icons";
-import { GinkgoNode } from '../ginkgoNode';
+import { GinkgoNode, isWrenchNode } from '../ginkgoNode';
 
 // iconForGinkgoNode returns the icon representation of the ginkgo node.
 // See https://code.visualstudio.com/api/references/icons-in-labels#icon-listing
@@ -44,17 +44,14 @@ export function iconForGinkgoNode(context: vscode.ExtensionContext, node: Ginkgo
         };
     }
 
+    if (isWrenchNode(node)) {
+        return {
+            dark: context.asAbsolutePath(path.join("resources", "dark", Icons.wrench)),
+            light: context.asAbsolutePath(path.join("resources", "light", Icons.wrench))
+        };
+    }
+
     switch (node.name) {
-        case 'BeforeEach':
-        case 'AfterEach':
-        case 'JustBeforeEach':
-        case 'JustAfterEach':
-        case 'BeforeSuite':
-        case 'AfterSuite':
-            return {
-                dark: context.asAbsolutePath(path.join("resources", "dark", Icons.wrench)),
-                light: context.asAbsolutePath(path.join("resources", "light", Icons.wrench))
-            };
         case 'DescribeTable':
         case 'FDescribeTable':
         case 'PDescribeTable':
@@ -103,14 +100,11 @@ export function iconForGinkgoNodeItem(node: GinkgoNode): vscode.ThemeIcon | unde
         }
     }
 
+    if (isWrenchNode(node)) {
+        return new vscode.ThemeIcon('wrench');
+    }
+
     switch (node.name) {
-        case 'BeforeEach':
-        case 'AfterEach':
-        case 'JustBeforeEach':
-        case 'JustAfterEach':
-        case 'BeforeSuite':
-        case 'AfterSuite':
-            return new vscode.ThemeIcon('wrench');
         case 'DescribeTable':
         case 'FDescribeTable':
         case 'PDescribeTable':

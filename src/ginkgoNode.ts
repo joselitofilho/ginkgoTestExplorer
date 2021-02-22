@@ -24,5 +24,18 @@ export function isRootNode(node: GinkgoNode): boolean {
 }
 
 export function isRunnableTest(node: GinkgoNode): boolean {
-    return node.name !== 'By' && !node.pending;
+    return node.name !== 'By' && !node.pending && !isWrenchNode(node);
+}
+
+export function isWrenchNode(node: GinkgoNode): boolean {
+    switch (node.name) {
+        case 'BeforeEach':
+        case 'AfterEach':
+        case 'JustBeforeEach':
+        case 'JustAfterEach':
+        case 'BeforeSuite':
+        case 'AfterSuite':
+            return true;
+    }
+    return false;
 }
