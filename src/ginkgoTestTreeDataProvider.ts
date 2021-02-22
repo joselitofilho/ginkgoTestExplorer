@@ -7,7 +7,7 @@ import * as decorationUtil from './util/decoration';
 import { Commands } from './commands';
 import { outputChannel } from './ginkgoTestExplorer';
 import { TestResult } from './testResult';
-import { GinkgoNode, isRootNode, isRunnableTest } from './ginkgoNode';
+import { GinkgoNode, isRootNode, isRunnableTest, isWrenchNode } from './ginkgoNode';
 import { GO_MODE } from './ginkgoTestExplorer';
 
 type UpdateOn = 'onSave' | 'onType';
@@ -19,7 +19,7 @@ export class GinkgoTestTreeDataProvider implements vscode.TreeDataProvider<Ginkg
     private updateListener?: vscode.Disposable;
 
     private editor?: vscode.TextEditor;
-    private roots: GinkgoNode[] = [];
+    private _roots: GinkgoNode[] = [];
     private discoveredTestsMap: Map<string, GinkgoNode>;
     private _discoveredTests: GinkgoNode[];
     private _rootNode?: GinkgoNode;
@@ -44,6 +44,10 @@ export class GinkgoTestTreeDataProvider implements vscode.TreeDataProvider<Ginkg
 
     get discoveredTests(): GinkgoNode[] {
         return this._discoveredTests;
+    }
+
+    get roots(): GinkgoNode[] {
+        return this._roots;
     }
 
     get rootNode(): GinkgoNode | undefined {
@@ -77,8 +81,12 @@ export class GinkgoTestTreeDataProvider implements vscode.TreeDataProvider<Ginkg
             filter(test => test.key === node.key).
             forEach(node => {
                 this.commands.sendTestRunStarted(node);
-                if (node.nodes.length > 0) {
-                    node.nodes.forEach(c => this.prepareToRunTest(c));
+                if (node.nodes.length > 0 && !isWrenchNode(node)) {
+                    node.nodes.forEach(n => {
+                        if (!isWrenchNode(n)) {
+                            this.prepareToRunTest(n);
+                        }
+                    });
                 }
             });
     }
@@ -91,10 +99,9 @@ export class GinkgoTestTreeDataProvider implements vscode.TreeDataProvider<Ginkg
             return;
         }
         this.editor = editor;
-        this.roots = [];
+        this._roots = [];
         this._onDidChangeTreeData.fire(undefined);
     }
-
 
     private isDocumentForActiveEditor(doc: vscode.TextDocument): boolean {
         if (!this.editor) {
@@ -110,7 +117,7 @@ export class GinkgoTestTreeDataProvider implements vscode.TreeDataProvider<Ginkg
         if (evt.contentChanges.length === 0) {
             return;
         }
-        this.roots = [];
+        this._roots = [];
         if (this.documentChangedTimer) {
             clearTimeout(this.documentChangedTimer);
             this.documentChangedTimer = undefined;
@@ -122,7 +129,7 @@ export class GinkgoTestTreeDataProvider implements vscode.TreeDataProvider<Ginkg
         if (!this.isDocumentForActiveEditor(doc)) {
             return;
         }
-        this.roots = [];
+        this._roots = [];
         this._onDidChangeTreeData.fire(undefined);
     }
 
@@ -134,10 +141,10 @@ export class GinkgoTestTreeDataProvider implements vscode.TreeDataProvider<Ginkg
             outputChannel.appendLine(`Did not populate outline view: document "${this.editor.document.uri}" language is not Go.`);
             return undefined;
         }
-        if (this.roots.length === 0) {
+        if (this._roots.length === 0) {
             try {
                 const outline = await this.outlineFromDoc(this.editor.document);
-                this.roots = outline.nested;
+                this._roots = outline.nested;
             } catch (err) {
                 outputChannel.appendLine(`Could not populate the outline view: ${err}`);
                 void vscode.window.showErrorMessage('Could not populate the outline view', ...['Open Log']).then(action => {
@@ -150,7 +157,7 @@ export class GinkgoTestTreeDataProvider implements vscode.TreeDataProvider<Ginkg
         }
 
         if (!element) {
-            return this.roots;
+            return this._roots;
         }
         return element.nodes;
     }

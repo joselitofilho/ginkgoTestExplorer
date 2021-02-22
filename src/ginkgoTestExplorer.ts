@@ -172,12 +172,14 @@ export class GinkgoTestExplorer {
         }
     }
 
-    private async onRunAllTests(): Promise<TestResult[]> {
+    private async onRunAllTests() {
+        this.ginkgoTestTreeDataProvider.roots.forEach(r => {
+            this.ginkgoTestTreeDataProvider.prepareToRunTest(r);
+        });
         if (this.ginkgoTestTreeDataProvider.rootNode) {
             this.ginkgoTestTreeDataProvider.prepareToRunTest(this.ginkgoTestTreeDataProvider.rootNode);
-            return await this.ginkgoTest.runTest();
+            await this.ginkgoTest.runTest();
         }
-        return [];
     }
 
     private async onGotoSymbolInEditor() {

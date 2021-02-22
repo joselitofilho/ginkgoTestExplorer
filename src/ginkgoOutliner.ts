@@ -85,6 +85,10 @@ function getNodeKey(node: GinkgoNode): string {
 export function fromJSON(input: string): GinkgoOutline {
     const nested: GinkgoNode[] = JSON.parse(input);
 
+    nested.forEach(node => {
+        node.key = getNodeKey(node).trim();
+    });
+
     const flat: GinkgoNode[] = [];
     for (let n of nested) {
         preOrder(n, function (n: GinkgoNode) {
