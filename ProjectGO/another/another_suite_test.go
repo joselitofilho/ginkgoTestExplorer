@@ -1,4 +1,4 @@
-package example_test
+package another_test
 
 import (
 	"testing"
@@ -7,7 +7,7 @@ import (
 	. "github.com/onsi/gomega"
 )
 
-func TestExampleSuite(t *testing.T) {
+func TestAnotherSuite(t *testing.T) {
 	RegisterFailHandler(Fail)
-	RunSpecs(t, "Example Suite")
+	RunSpecs(t, "Another Suite")
 }

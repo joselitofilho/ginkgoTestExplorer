@@ -20,7 +20,7 @@ export interface GinkgoNode {
 }
 
 export function isRootNode(node: GinkgoNode): boolean {
-    return node.parent === undefined && node.nodes.length > 0;
+    return node.parent === undefined && node.nodes.length > 0 && !isWrenchNode(node);
 }
 
 export function isRunnableTest(node: GinkgoNode): boolean {
