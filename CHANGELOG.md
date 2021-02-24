@@ -2,6 +2,10 @@
 
 All notable changes to the "ginkgotestexplorer" extension will be documented in this file.
 
+### v0.0.8
+
+- Fix running and debugging package path.
+
 ### v0.0.7
 
 - Fix running when there are BeforeSuite, BeforeEach, AfterSuite and AfterEach nodes.

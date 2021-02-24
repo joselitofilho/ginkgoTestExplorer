@@ -25,8 +25,12 @@ export class GinkgoTest {
         this.ginkgoPath = ginkgoPath;
     }
 
-    public async runTest(spec?: string): Promise<TestResult[]> {
-        const cwd = this.cwd;
+    public async runTest(document?: vscode.TextDocument, spec?: string): Promise<TestResult[]> {
+        let cwd;
+        if (document) {
+            this.cwd = path.dirname(document.fileName);
+        }
+        cwd = this.cwd;
         const reportFile = this.prepareReportFile(cwd);
         const coverageDir = this.prepareCoverageDir(cwd);
 
@@ -50,7 +54,11 @@ export class GinkgoTest {
     }
 
     public async debugTest(document?: vscode.TextDocument, spec?: string): Promise<TestResult[]> {
-        const cwd = this.cwd;
+        let cwd;
+        if (document) {
+            this.cwd = path.dirname(document.fileName);
+        }
+        cwd = this.cwd;
         const reportFile = this.prepareReportFile(cwd);
 
         let workspaceFolder = this.workspaceFolder;
@@ -82,8 +90,9 @@ export class GinkgoTest {
     }
 
     public generateCoverage(): string {
-        const coverageDir = path.normalize(path.join(this.cwd, 'coverage'));
-        cp.execSync(`go tool cover -html=${coverageDir}/${coverageOut} -o ${coverageDir}/${coverageHTML}`, { cwd: this.cwd });
+        const cwd = this.cwd;
+        const coverageDir = path.normalize(path.join(cwd, 'coverage'));
+        cp.execSync(`go tool cover -html=${coverageDir}/${coverageOut} -o ${coverageDir}/${coverageHTML}`, { cwd });
         return fs.readFileSync(`${coverageDir}/${coverageHTML}`, { encoding: 'utf8' });
     }
 
