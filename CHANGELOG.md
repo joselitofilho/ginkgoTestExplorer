@@ -2,6 +2,10 @@
 
 All notable changes to the "ginkgotestexplorer" extension will be documented in this file.
 
+### v0.0.9
+
+- Add the generate project coverage command.
+
 ### v0.0.8
 
 - Fix running and debugging package path.

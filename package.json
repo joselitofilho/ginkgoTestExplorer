@@ -7,7 +7,7 @@
     "type": "git",
     "url": "https://github.com/joselitofilho/ginkgoTestExplorer"
   },
-  "version": "0.0.8",
+  "version": "0.0.9",
   "publisher": "joselitofilho",
   "engines": {
     "vscode": "^1.53.0"
@@ -47,12 +47,12 @@
     "menus": {
       "view/title": [
         {
-          "command": "ginkgotestexplorer.runAllTest",
+          "command": "ginkgotestexplorer.runSuiteTest",
           "when": "view == ginkgotestexplorer",
           "group": "navigation@0"
         },
         {
-          "command": "ginkgotestexplorer.generateCoverage",
+          "command": "ginkgotestexplorer.generateSuiteCoverage",
           "when": "view == ginkgotestexplorer",
           "group": "navigation@1"
         }
@@ -77,7 +77,7 @@
         "title": "run test"
       },
       {
-        "command": "ginkgotestexplorer.runAllTest",
+        "command": "ginkgotestexplorer.runSuiteTest",
         "title": "Ginkgo: Run all test",
         "icon": {
           "light": "resources/light/run.svg",
@@ -85,12 +85,16 @@
         }
       },
       {
-        "command": "ginkgotestexplorer.generateCoverage",
-        "title": "Ginkgo: Generate coverage",
+        "command": "ginkgotestexplorer.generateSuiteCoverage",
+        "title": "Ginkgo: Generate suite coverage",
         "icon": {
           "light": "resources/light/coverage.svg",
           "dark": "resources/dark/coverage.svg"
         }
+      },
+      {
+        "command": "ginkgotestexplorer.generateProjectCoverage",
+        "title": "Ginkgo: Generate project coverage"
       },
       {
         "command": "ginkgotestexplorer.showTestoutput",
