@@ -30,7 +30,7 @@ export class GinkgoTestTreeDataProvider implements vscode.TreeDataProvider<Ginkg
     private documentChangedTimer?: NodeJS.Timeout;
 
     constructor(private context: vscode.ExtensionContext, private commands: Commands, private readonly outlineFromDoc: { (doc: vscode.TextDocument): Promise<outliner.GinkgoOutline> }, private readonly clickTreeItemCommand: string, private updateOn: UpdateOn, private updateOnTypeDelay: number, private doubleClickThreshold: number) {
-        context.subscriptions.push(commands.discoveredTest(this.onDicoveredTest, this));
+        // context.subscriptions.push(commands.discoveredTest(this.onDicoveredTest, this));
         context.subscriptions.push(commands.testRunStarted(this.onTestRunStarted, this));
         context.subscriptions.push(commands.testResults(this.onTestResult, this));
         context.subscriptions.push(vscode.commands.registerCommand(this.clickTreeItemCommand, async (node) => this.clickTreeItem(node)));
@@ -96,6 +96,7 @@ export class GinkgoTestTreeDataProvider implements vscode.TreeDataProvider<Ginkg
             // If the user switches to a non-main editor, e.g., settings, or
             // output, do not update the Outline view. This behavior is copied
             // from the language-level Outline view.
+            this._rootNode = undefined;
             return;
         }
         this.editor = editor;
@@ -145,6 +146,7 @@ export class GinkgoTestTreeDataProvider implements vscode.TreeDataProvider<Ginkg
             try {
                 const outline = await this.outlineFromDoc(this.editor.document);
                 this._roots = outline.nested;
+                this.onDicoveredTest(outline.flat);
             } catch (err) {
                 outputChannel.appendLine(`Could not populate the outline view: ${err}`);
                 void vscode.window.showErrorMessage('Could not populate the outline view', ...['Open Log']).then(action => {

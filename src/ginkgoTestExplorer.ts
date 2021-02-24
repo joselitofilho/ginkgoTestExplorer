@@ -120,8 +120,8 @@ export class GinkgoTestExplorer {
         const isInstalled = await this.ginkgoTest.checkGinkgoIsInstalled(ginkgoPath);
         if (!isInstalled) {
             outputChannel.appendLine(`Ginkgo not found.`);
-            const action = await vscode.window.showInformationMessage('Would you like to install a Ginkgo and Gomega?', ...['Yes']);
-            if (action === 'Yes') {
+            const action = await vscode.window.showInformationMessage('The Ginkgo executable was not found.', ...['Install']);
+            if (action === 'Install') {
                 outputChannel.show();
                 outputChannel.appendLine('Installing Ginkgo and Gomega.');
                 outputChannel.appendLine('go get github.com/onsi/ginkgo/ginkgo');
@@ -161,24 +161,25 @@ export class GinkgoTestExplorer {
     private async onRunTest(testNode: GinkgoNode, mode: string) {
         this.ginkgoTestTreeDataProvider.prepareToRunTest(testNode);
 
+        const editor = vscode.window.activeTextEditor;
         switch (mode) {
             case 'run':
-                await this.ginkgoTest.runTest(testNode.key);
+                await this.ginkgoTest.runTest(editor?.document, testNode.key);
                 break;
             case 'debug':
-                const editor = vscode.window.activeTextEditor;
                 await this.ginkgoTest.debugTest(editor?.document, testNode.key);
                 break;
         }
     }
 
     private async onRunAllTests() {
-        this.ginkgoTestTreeDataProvider.roots.forEach(r => {
-            this.ginkgoTestTreeDataProvider.prepareToRunTest(r);
-        });
+        // TODO: run simultaneos.
+        outputChannel.clear();
         if (this.ginkgoTestTreeDataProvider.rootNode) {
             this.ginkgoTestTreeDataProvider.prepareToRunTest(this.ginkgoTestTreeDataProvider.rootNode);
-            await this.ginkgoTest.runTest();
+            await this.onRunTestTree(this.ginkgoTestTreeDataProvider.rootNode);
+        } else {
+            outputChannel.appendLine('Did not run test: no active text editor.');
         }
     }
 
@@ -199,18 +200,22 @@ export class GinkgoTestExplorer {
     }
 
     private async onGenerateCoverage() {
+        // TODO: run simultaneos.
         outputChannel.clear();
+        if (this.ginkgoTestTreeDataProvider.rootNode) {
+            // TODO: Check if there was an error?
+            await this.onRunAllTests();
 
-        // TODO: Check if there was an error?
-        await this.onRunAllTests();
-
-        outputChannel.appendLine('Generating coverage results...');
-        try {
-            const output = this.ginkgoTest.generateCoverage();
-            const viewPanel = vscode.window.createWebviewPanel('Coverage', 'Coverage results', { viewColumn: vscode.ViewColumn.Two, preserveFocus: true }, { enableScripts: true });
-            viewPanel.webview.html = output;
-        } catch (err) {
-            outputChannel.appendLine(`Error while generating coverage: ${err}.`);
+            outputChannel.appendLine('Generating coverage results...');
+            try {
+                const output = this.ginkgoTest.generateCoverage();
+                const viewPanel = vscode.window.createWebviewPanel('Coverage', `Coverage results: ${this.ginkgoTestTreeDataProvider.rootNode.text}`, { viewColumn: vscode.ViewColumn.Two, preserveFocus: true }, { enableScripts: true });
+                viewPanel.webview.html = output;
+            } catch (err) {
+                outputChannel.appendLine(`Error while generating coverage: ${err}.`);
+            }
+        } else {
+            outputChannel.appendLine('Did not generate coverage: no active text editor.');
         }
     }
 

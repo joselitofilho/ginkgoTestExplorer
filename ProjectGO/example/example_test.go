@@ -1,15 +1,25 @@
 package example_test
 
 import (
+	"example/example"
+
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 )
 
+var _ = BeforeEach(func() {
+	By("", func() {})
+})
+
 var _ = Describe("Example", func() {
+
+	BeforeEach(func() {})
+
 	It("works", func() {
 		By("specific job works", func() {
 			Expect(1).To(Equal(1))
 		})
+		example.Func()
 		Expect(2).To(Equal(2))
 	})
 
