@@ -4,30 +4,17 @@ import { GinkgoTestTreeDataProvider } from './ginkgoTestTreeDataProvider';
 import { GinkgoOutline, GinkgoOutliner } from './ginkgoOutliner';
 import { CachingOutliner } from './cachingOutliner';
 import { Commands } from './commands';
-import { TestResult } from './testResult';
 import { GinkgoRunTestCodeLensProvider } from './ginkgoRunTestCodelensProvider';
 import { GinkgoNode } from './ginkgoNode';
 import { GinkgoTest } from './ginkgoTest';
-
-const extensionName = 'ginkgotestexplorer';
-const displayName = 'Ginkgo Test Explorer';
-
-// These are used when a property key is missing from settings, or its value is invalid.
-const defaultGinkgoPath = 'ginkgo';
-const defaultUpdateOn = 'onType';
-const defaultUpdateOnTypeDelay = 1000;
-const defaultDoubleClickThreshold = 400;
-const defaultCacheTTL = 3600000;
-const defaultEnableCodeLens = true;
-
-export const GO_MODE: vscode.DocumentFilter = { language: 'go', scheme: 'file' };
+import { constants, GO_MODE } from './constants';
 
 export function getConfiguration(): vscode.WorkspaceConfiguration {
-    return vscode.workspace.getConfiguration(extensionName);
+    return vscode.workspace.getConfiguration(constants.extensionName);
 }
 
 export function affectsConfiguration(evt: vscode.ConfigurationChangeEvent, name: string): boolean {
-    return evt.affectsConfiguration(`${extensionName}.${name}`);
+    return evt.affectsConfiguration(`${constants.extensionName}.${name}`);
 }
 
 export let outputChannel: vscode.OutputChannel;
@@ -43,11 +30,11 @@ export class GinkgoTestExplorer {
     readonly commands: Commands;
     constructor(context: vscode.ExtensionContext) {
         this.commands = new Commands();
-        outputChannel = vscode.window.createOutputChannel(displayName);
+        outputChannel = vscode.window.createOutputChannel(constants.displayName);
         context.subscriptions.push(outputChannel);
         outputChannel.appendLine('Welcome to Ginkgo Explorer');
 
-        const ginkgoPath = getConfiguration().get('ginkgoPath', defaultGinkgoPath);
+        const ginkgoPath = getConfiguration().get('ginkgoPath', constants.defaultGinkgoPath);
 
         this.checkGinkgoIsInstalled(ginkgoPath);
 
@@ -55,43 +42,49 @@ export class GinkgoTestExplorer {
         if (vscode.workspace.workspaceFolders) {
             workspaceFolder = vscode.workspace.workspaceFolders[0];
         }
-        this.ginkgoTest = new GinkgoTest(ginkgoPath, this.commands, workspaceFolder);
+        this.ginkgoTest = new GinkgoTest(ginkgoPath, this.commands, getConfiguration().get('testEnvVars', constants.defaultTestEnvVars), getConfiguration().get('testEnvFile', constants.defaultTestEnvFile), workspaceFolder);
         context.subscriptions.push(vscode.workspace.onDidChangeConfiguration(evt => {
             if (affectsConfiguration(evt, 'ginkgoPath')) {
-                this.ginkgoTest.setGinkgoPath(getConfiguration().get('ginkgoPath', defaultGinkgoPath));
+                this.ginkgoTest.setGinkgoPath(getConfiguration().get('ginkgoPath', constants.defaultGinkgoPath));
+            }
+            if (affectsConfiguration(evt, 'testEnvVars')) {
+                this.ginkgoTest.setTestEnvVars(getConfiguration().get('testEnvVars', constants.defaultTestEnvVars));
+            }
+            if (affectsConfiguration(evt, 'testEnvFile')) {
+                this.ginkgoTest.setTestEnvFile(getConfiguration().get('testEnvFile', constants.defaultTestEnvFile));
             }
         }));
 
         this.outliner = new GinkgoOutliner(ginkgoPath, this.commands);
-        this.cachingOutliner = new CachingOutliner(this.outliner, getConfiguration().get('cacheTTL', defaultCacheTTL));
+        this.cachingOutliner = new CachingOutliner(this.outliner, getConfiguration().get('cacheTTL', constants.defaultCacheTTL));
         context.subscriptions.push({ dispose: () => { this.cachingOutliner.clear(); } });
         context.subscriptions.push(vscode.workspace.onDidChangeConfiguration(evt => {
             if (affectsConfiguration(evt, 'ginkgoPath')) {
-                this.outliner.setGinkgoPath(getConfiguration().get('ginkgoPath', defaultGinkgoPath));
+                this.outliner.setGinkgoPath(getConfiguration().get('ginkgoPath', constants.defaultGinkgoPath));
                 this.cachingOutliner.setOutliner(this.outliner);
             }
             if (affectsConfiguration(evt, 'cacheTTL')) {
-                this.cachingOutliner.setCacheTTL(getConfiguration().get('cacheTTL', defaultCacheTTL));
+                this.cachingOutliner.setCacheTTL(getConfiguration().get('cacheTTL', constants.defaultCacheTTL));
             }
         }));
 
         const fnOutlineFromDoc: { (doc: vscode.TextDocument): Promise<GinkgoOutline> } = doc => this.cachingOutliner.fromDocument(doc);
 
         this.ginkgoTestTreeDataProvider = new GinkgoTestTreeDataProvider(context, this.commands, fnOutlineFromDoc, 'ginkgotestexplorer.clickTreeItem',
-            getConfiguration().get('updateOn', defaultUpdateOn),
-            getConfiguration().get('updateOnTypeDelay', defaultUpdateOnTypeDelay),
-            getConfiguration().get('doubleClickThreshold', defaultDoubleClickThreshold),
+            getConfiguration().get('updateOn', constants.defaultUpdateOn),
+            getConfiguration().get('updateOnTypeDelay', constants.defaultUpdateOnTypeDelay),
+            getConfiguration().get('doubleClickThreshold', constants.defaultDoubleClickThreshold),
         );
         context.subscriptions.push(vscode.window.registerTreeDataProvider('ginkgotestexplorer', this.ginkgoTestTreeDataProvider));
         context.subscriptions.push(vscode.workspace.onDidChangeConfiguration(evt => {
             if (affectsConfiguration(evt, 'updateOn')) {
-                this.ginkgoTestTreeDataProvider.setUpdateOn(getConfiguration().get('updateOn', defaultUpdateOn));
+                this.ginkgoTestTreeDataProvider.setUpdateOn(getConfiguration().get('updateOn', constants.defaultUpdateOn));
             }
             if (affectsConfiguration(evt, 'updateOnTypeDelay')) {
-                this.ginkgoTestTreeDataProvider.setUpdateOnTypeDelay(getConfiguration().get('updateOnTypeDelay', defaultUpdateOnTypeDelay));
+                this.ginkgoTestTreeDataProvider.setUpdateOnTypeDelay(getConfiguration().get('updateOnTypeDelay', constants.defaultUpdateOnTypeDelay));
             }
             if (affectsConfiguration(evt, 'doubleClickThreshold')) {
-                this.ginkgoTestTreeDataProvider.setDoubleClickThreshold(getConfiguration().get('doubleClickThreshold', defaultDoubleClickThreshold));
+                this.ginkgoTestTreeDataProvider.setDoubleClickThreshold(getConfiguration().get('doubleClickThreshold', constants.defaultDoubleClickThreshold));
             }
         }));
         context.subscriptions.push(vscode.commands.registerCommand("ginkgotestexplorer.runTest.tree", this.onRunTestTree.bind(this)));
@@ -100,7 +93,7 @@ export class GinkgoTestExplorer {
         context.subscriptions.push(vscode.languages.registerCodeLensProvider(GO_MODE, this.ginkgoTestCodeLensProvider));
         context.subscriptions.push(vscode.workspace.onDidChangeConfiguration(evt => {
             if (affectsConfiguration(evt, 'enableCodeLens')) {
-                this.ginkgoTestCodeLensProvider.setEnabled(getConfiguration().get('enableCodeLens', defaultEnableCodeLens));
+                this.ginkgoTestCodeLensProvider.setEnabled(getConfiguration().get('enableCodeLens', constants.defaultEnableCodeLens));
             }
         }));
         context.subscriptions.push(vscode.commands.registerCommand("ginkgotestexplorer.runTest.codelens", (args) => {
@@ -108,7 +101,7 @@ export class GinkgoTestExplorer {
                 this.onRunTest(args.testNode, args.mode);
             }
         }));
-        this.ginkgoTestCodeLensProvider.setEnabled(getConfiguration().get('enableCodeLens', defaultEnableCodeLens));
+        this.ginkgoTestCodeLensProvider.setEnabled(getConfiguration().get('enableCodeLens', constants.defaultEnableCodeLens));
 
         context.subscriptions.push(vscode.commands.registerCommand('ginkgotestexplorer.generateProjectCoverage', this.onGenerateProjectCoverage.bind(this)));
         context.subscriptions.push(vscode.commands.registerCommand('ginkgotestexplorer.generateSuiteCoverage', this.onGenerateSuiteCoverage.bind(this)));
