@@ -4,10 +4,11 @@ import { GinkgoTestTreeDataProvider } from './ginkgoTestTreeDataProvider';
 import { GinkgoOutline, GinkgoOutliner } from './ginkgoOutliner';
 import { CachingOutliner } from './cachingOutliner';
 import { Commands } from './commands';
+import { constants, GO_MODE } from './constants';
 import { GinkgoRunTestCodeLensProvider } from './ginkgoRunTestCodelensProvider';
 import { GinkgoNode } from './ginkgoNode';
 import { GinkgoTest } from './ginkgoTest';
-import { constants, GO_MODE } from './constants';
+import { StatusBar } from './statusBar';
 
 export function getConfiguration(): vscode.WorkspaceConfiguration {
     return vscode.workspace.getConfiguration(constants.extensionName);
@@ -26,6 +27,7 @@ export class GinkgoTestExplorer {
     private ginkgoTestTreeDataProvider: GinkgoTestTreeDataProvider;
     private ginkgoTestCodeLensProvider: GinkgoRunTestCodeLensProvider;
     private outliner: GinkgoOutliner;
+    private statusBar: StatusBar;
 
     readonly commands: Commands;
     constructor(context: vscode.ExtensionContext) {
@@ -103,10 +105,19 @@ export class GinkgoTestExplorer {
         }));
         this.ginkgoTestCodeLensProvider.setEnabled(getConfiguration().get('enableCodeLens', constants.defaultEnableCodeLens));
 
+        this.statusBar = new StatusBar(context, 'ginkgotestexplorer.commandsStatusBar', 'ginkgotestexplorer.runningCommandStatusBar', 'ginkgotestexplorer.runAllProjectTests', 'ginkgotestexplorer.generateProjectCoverage');
+        context.subscriptions.push(vscode.commands.registerCommand('ginkgotestexplorer.commandsStatusBar', () => {
+            this.statusBar.onClickCommandsStatusBarItem();
+        }));
+        context.subscriptions.push(vscode.commands.registerCommand('ginkgotestexplorer.runningCommandStatusBar', () => {
+            this.statusBar.onClickRunningCommandStatusBarItem();
+        }));
+
         context.subscriptions.push(vscode.commands.registerCommand('ginkgotestexplorer.generateProjectCoverage', this.onGenerateProjectCoverage.bind(this)));
         context.subscriptions.push(vscode.commands.registerCommand('ginkgotestexplorer.generateSuiteCoverage', this.onGenerateSuiteCoverage.bind(this)));
         context.subscriptions.push(vscode.commands.registerCommand('ginkgotestexplorer.gotoSymbolInEditor', this.onGotoSymbolInEditor.bind(this)));
         context.subscriptions.push(vscode.commands.registerCommand("ginkgotestexplorer.runSuiteTest", this.onRunSuiteTest.bind(this)));
+        context.subscriptions.push(vscode.commands.registerCommand("ginkgotestexplorer.runAllProjectTests", this.onRunAllProjectTests.bind(this)));
         context.subscriptions.push(vscode.commands.registerCommand("ginkgotestexplorer.showTestoutput", this.onShowTestOutput.bind(this)));
     }
 
@@ -177,6 +188,22 @@ export class GinkgoTestExplorer {
         }
     }
 
+    private async onRunAllProjectTests() {
+        // TODO: run simultaneos.
+        this.statusBar.showRunningCommandBar("all project tests");
+        outputChannel.clear();
+
+        outputChannel.appendLine('Running all project tests...');
+        try {
+            const result = this.ginkgoTest.runGoTest();
+            outputChannel.appendLine(result);
+            outputChannel.appendLine('Project tests have been run.');
+        } catch (err) {
+            outputChannel.appendLine(`Error while running all project tests: ${err}.`);
+        }
+        this.statusBar.hideRunningCommandBar();
+    }
+
     private async onGotoSymbolInEditor() {
         if (!vscode.window.activeTextEditor) {
             outputChannel.appendLine('Did not create the Go To Symbol menu: no active text editor');
@@ -195,6 +222,7 @@ export class GinkgoTestExplorer {
 
     private async onGenerateProjectCoverage() {
         // TODO: run simultaneos.
+        this.statusBar.showRunningCommandBar("project coverage");
         outputChannel.clear();
 
         outputChannel.appendLine('Generating project coverage results...');
@@ -205,27 +233,34 @@ export class GinkgoTestExplorer {
             const output = this.ginkgoTest.generateCoverage();
             const viewPanel = vscode.window.createWebviewPanel('Coverage', 'Project coverage result', { viewColumn: vscode.ViewColumn.Two, preserveFocus: true }, { enableScripts: true });
             viewPanel.webview.html = output;
+            outputChannel.appendLine('Project coverage has been generated.');
         } catch (err) {
             outputChannel.appendLine(`Error while generating project coverage: ${err}.`);
         }
+        this.statusBar.hideRunningCommandBar();
     }
 
     private async onGenerateSuiteCoverage() {
         // TODO: run simultaneos.
         outputChannel.clear();
         const document = vscode.window.activeTextEditor?.document;
-        if (this.ginkgoTestTreeDataProvider.rootNode) {
+        const rootNode = this.ginkgoTestTreeDataProvider.rootNode;
+        if (rootNode) {
+            this.statusBar.showRunningCommandBar("suite coverage");
+            
             // TODO: Check if there was an error?
             await this.onRunSuiteTest();
 
             outputChannel.appendLine('Generating suite coverage results...');
             try {
                 const output = this.ginkgoTest.generateCoverage(document);
-                const viewPanel = vscode.window.createWebviewPanel('Coverage', `Coverage results: ${this.ginkgoTestTreeDataProvider.rootNode.text}`, { viewColumn: vscode.ViewColumn.Two, preserveFocus: true }, { enableScripts: true });
+                const viewPanel = vscode.window.createWebviewPanel('Coverage', `Coverage results: ${rootNode.text}`, { viewColumn: vscode.ViewColumn.Two, preserveFocus: true }, { enableScripts: true });
                 viewPanel.webview.html = output;
             } catch (err) {
                 outputChannel.appendLine(`Error while generating suite coverage: ${err}.`);
             }
+
+            this.statusBar.hideRunningCommandBar();
         } else {
             outputChannel.appendLine('Did not generate suite coverage: no active text editor.');
         }

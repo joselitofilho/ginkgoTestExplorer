@@ -34,10 +34,10 @@ export class GinkgoTest {
         this.testEnvFile = testEnvFile;
     }
 
-    public runGoTest() {
+    public runGoTest(): string {
         const cwd = this.cwd;
         const coverageDir = this.prepareCoverageDir(cwd);
-        cp.execSync(`cd ${cwd} && go test -coverpkg=./... -coverprofile=${coverageDir}/${coverageOut} -count=1 ./...`, { cwd });
+        return cp.execSync(`cd ${cwd} && go test -coverpkg=./... -coverprofile=${coverageDir}/${coverageOut} -count=1 ./...`, { cwd }).toString();
     }
 
     public async runTest(document?: vscode.TextDocument, spec?: string): Promise<TestResult[]> {
