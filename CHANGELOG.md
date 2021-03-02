@@ -2,6 +2,13 @@
 
 All notable changes to the "ginkgotestexplorer" extension will be documented in this file.
 
+### v0.0.10
+
+- Creates a status bar for helping running project tests and coverage.
+- Creates a status bar to show the progress of the command execution.
+- Creates a new configuration to specify the test env file or env vars.
+- Creates a new configuration to specify where the extension will be executed commands: on output channel or terminal.
+
 ### v0.0.9
 
 - Add the generate project coverage command.

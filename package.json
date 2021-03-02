@@ -7,7 +7,7 @@
     "type": "git",
     "url": "https://github.com/joselitofilho/ginkgoTestExplorer"
   },
-  "version": "0.0.9",
+  "version": "0.0.10",
   "publisher": "joselitofilho",
   "engines": {
     "vscode": "^1.53.0"
