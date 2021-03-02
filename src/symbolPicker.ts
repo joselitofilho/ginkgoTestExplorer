@@ -4,8 +4,9 @@ import * as vscode from 'vscode';
 import * as outliner from './ginkgoOutliner';
 import * as editorUtil from './util/editor';
 import * as decorationUtil from './util/decoration';
-import { GO_MODE, outputChannel } from './ginkgoTestExplorer';
+import { outputChannel } from './ginkgoTestExplorer';
 import { GinkgoNode } from './ginkgoNode';
+import { GO_MODE } from './constants';
 
 class GinkgoNodeQuickPickItem implements vscode.QuickPickItem {
     label = '';
