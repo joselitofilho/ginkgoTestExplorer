@@ -7,7 +7,8 @@ import * as path from "path";
 import * as junit2json from 'junit2json';
 import { Commands } from './commands';
 import { TestResult } from './testResult';
-import { constants } from './constants';
+import { constants, ExecuteCommandsOn } from './constants';
+import { outputChannel } from './ginkgoTestExplorer';
 
 const coverageHTML = "coverage.html";
 const coverageOut = "coverage.out";
@@ -15,7 +16,7 @@ const coverageOut = "coverage.out";
 export class GinkgoTest {
     private cwd: string;
 
-    constructor(private ginkgoPath: string, private commands: Commands, private testEnvVars: {}, private testEnvFile: string, private workspaceFolder?: vscode.WorkspaceFolder) {
+    constructor(private ginkgoPath: string, private commands: Commands, private testEnvVars: {}, private testEnvFile: string, private executeCommandsOn: ExecuteCommandsOn, private workspaceFolder?: vscode.WorkspaceFolder) {
         this.cwd = '';
         if (workspaceFolder) {
             this.cwd = workspaceFolder.uri.fsPath;
@@ -34,10 +35,15 @@ export class GinkgoTest {
         this.testEnvFile = testEnvFile;
     }
 
+    public setExecuteCommandsOn(executeCommandsOn: ExecuteCommandsOn) {
+        this.executeCommandsOn = executeCommandsOn;
+    }
+
     public runGoTest(): string {
         const cwd = this.cwd;
         const coverageDir = this.prepareCoverageDir(cwd);
-        return cp.execSync(`cd ${cwd} && go test -coverpkg=./... -coverprofile=${coverageDir}/${coverageOut} -count=1 ./...`, { cwd }).toString();
+        const args = `test -coverpkg=./... -coverprofile=${coverageDir}/${coverageOut} -v -count=1 ./...`;
+        return cp.spawnSync("go", args.split(" "), { cwd }).stdout.toString();
     }
 
     public async runTest(document?: vscode.TextDocument, spec?: string): Promise<TestResult[]> {
@@ -48,20 +54,33 @@ export class GinkgoTest {
         const reportFile = this.prepareReportFile(cwd);
         const coverageDir = this.prepareCoverageDir(cwd);
 
-        let activeTerminal = vscode.window.activeTerminal;
-        if (!activeTerminal) {
-            activeTerminal = vscode.window.createTerminal({ cwd });
+        const focus = (spec) ? `-focus "${spec}"` : "";
+        const cover = `-cover -coverpkg=./... -coverprofile=${coverageDir}/${coverageOut}`;
+        const report = `-reportFile ${reportFile}`;
+        const command = `${this.ginkgoPath} ${report} ${focus} ${cover} -r ${cwd}`;
+        if (this.executeCommandsOn === 'onTerminal') {
+            let activeTerminal = vscode.window.terminals.find(t => t.name === "gte-bash");
+            if (!activeTerminal) {
+                activeTerminal = vscode.window.createTerminal({ name: "gte-bash", cwd });
+            }
+            if (activeTerminal) {
+                activeTerminal.show(true);
+                activeTerminal.sendText('', true);
+                activeTerminal.sendText(`cd ${cwd} && ${command}`, true);
+            }
+        } else {
+            new Promise<string>(async (resolve, reject) => {
+                outputChannel.show(true);
+                outputChannel.clear();
+                outputChannel.appendLine(`${cwd}> ${command}`);
+                try {
+                    const output = cp.execSync(`cd ${cwd} && ${command}`, { cwd }).toString();
+                    resolve(output);
+                } catch (err) {
+                    reject(err);
+                }
+            }).then(output => outputChannel.appendLine(output)).catch(err => outputChannel.appendLine(`Error: ${err}`));
         }
-        if (activeTerminal) {
-            const focus = (spec) ? `-focus "${spec}"` : "";
-            const cover = `-cover -coverpkg=./... -coverprofile=${coverageDir}/${coverageOut}`;
-            const report = `-reportFile ${reportFile}`;
-            const command = `${this.ginkgoPath} ${report} ${focus} ${cover} -r ${cwd}`;
-            activeTerminal.show();
-            activeTerminal.sendText('', true);
-            activeTerminal.sendText(command, true);
-        }
-
         const xml = await this.waitForReportFile(reportFile);
         const testResults: TestResult[] = await this.parseTestResults(xml);
         this.commands.sendTestResults(testResults);
@@ -113,7 +132,7 @@ export class GinkgoTest {
     }
 
     public async checkGinkgoIsInstalled(ginkgoPath: string): Promise<boolean> {
-        return await new Promise<boolean>((resolve, reject) => {
+        return await new Promise<boolean>(resolve => {
             cp.execFile(ginkgoPath, ['help'], {}, (err, stdout, stderr) => {
                 if (err) {
                     return resolve(false);
@@ -124,7 +143,7 @@ export class GinkgoTest {
     }
 
     public async callGinkgoInstall(): Promise<boolean> {
-        return await new Promise<boolean>((resolve, reject) => {
+        return await new Promise<boolean>(resolve => {
             cp.execFile("go", ['get', 'github.com/onsi/ginkgo/ginkgo'], {}, (err, stdout, stderr) => {
                 if (err) {
                     return resolve(false);
@@ -135,7 +154,7 @@ export class GinkgoTest {
     }
 
     public async callGomegaInstall(): Promise<boolean> {
-        return await new Promise<boolean>((resolve, reject) => {
+        return await new Promise<boolean>(resolve => {
             cp.execFile("go", ['get', 'github.com/onsi/gomega/...'], {}, (err, stdout, stderr) => {
                 if (err) {
                     return resolve(false);
@@ -145,14 +164,14 @@ export class GinkgoTest {
         });
     }
 
-    private async waitForReportFile(reportFile: string): Promise<string> {
-        return await new Promise((resolveInterval, rejectInterval) => setInterval(function () {
-            if (fs.existsSync(reportFile)) {
-                resolveInterval(true);
+    private async waitForReportFile(file: string): Promise<string> {
+        return await new Promise(resolve => setInterval(function () {
+            if (fs.existsSync(file)) {
+                resolve(true);
             }
         }, 1000)).then(() => {
             // TODO: configure timeout and implements reject.
-            return this.readReportFile(reportFile);
+            return this.readReportFile(file);
         });
     }
 

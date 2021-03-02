@@ -3,6 +3,7 @@ import * as vscode from 'vscode';
 export const GO_MODE: vscode.DocumentFilter = { language: 'go', scheme: 'file' };
 
 export type UpdateOn = 'onSave' | 'onType';
+export type ExecuteCommandsOn = 'onOutputChannel' | 'onTerminal';
 
 export const constants = {
     extensionName: 'ginkgotestexplorer',
@@ -16,5 +17,6 @@ export const constants = {
     defaultCacheTTL: 3600000,
     defaultEnableCodeLens: true,
     defaultTestEnvVars: {},
-    defaultTestEnvFile: ""
+    defaultTestEnvFile: "",
+    defaultExecuteCommandsOn: 'onTerminal' as ExecuteCommandsOn
 };
