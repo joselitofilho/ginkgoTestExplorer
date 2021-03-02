@@ -164,6 +164,19 @@
           "default": null,
           "description": "Absolute path to a file containing environment variables definitions. File contents should be of the form key=value.",
           "scope": "resource"
+        },
+        "ginkgotestexplorer.executeCommandsOn": {
+          "type": "string",
+          "default": "onTerminal",
+          "enum": [
+            "onOutputChannel",
+            "onTerminal"
+          ],
+          "enumDescriptions": [
+            "Execute commands on output channel",
+            "Exeucte commands on terminal"
+          ],
+          "description": "When to execute commands."
         }
       }
     }
