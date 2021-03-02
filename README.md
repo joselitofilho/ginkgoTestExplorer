@@ -1,5 +1,6 @@
 # Ginkgo Test Explorer for VS Code
 
+Welcome!
 This VS Code extension offers a set of tools for the [Ginkgo Framework](https://onsi.github.io/ginkgo/).
 
 ![Ginkgo Test Explorer](https://github.com/joselitofilho/ginkgoTestExplorer/raw/main/media/ginkgotest.gif)
@@ -25,6 +26,16 @@ Just `go get` it:
 go get github.com/onsi/ginkgo/ginkgo
 go get github.com/onsi/gomega/...
 ```
+
+## Features
+
+- Tree tests view
+- Run/Debug individual test
+- Run/Debug suite tests
+- Run all project tests
+- Generate suite coverage
+- Generate project coverage
+- Go to symbol in editor
 
 ## License
 
