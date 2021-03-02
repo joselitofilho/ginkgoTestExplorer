@@ -78,11 +78,15 @@
       },
       {
         "command": "ginkgotestexplorer.runSuiteTest",
-        "title": "Ginkgo: Run all test",
+        "title": "Ginkgo: Run suite test",
         "icon": {
           "light": "resources/light/run.svg",
           "dark": "resources/dark/run.svg"
         }
+      },
+      {
+        "command": "ginkgotestexplorer.runAllProjectTests",
+        "title": "Ginkgo: Run all project tests"
       },
       {
         "command": "ginkgotestexplorer.generateSuiteCoverage",

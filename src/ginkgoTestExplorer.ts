@@ -4,7 +4,6 @@ import { GinkgoTestTreeDataProvider } from './ginkgoTestTreeDataProvider';
 import { GinkgoOutline, GinkgoOutliner } from './ginkgoOutliner';
 import { CachingOutliner } from './cachingOutliner';
 import { Commands } from './commands';
-import { TestResult } from './testResult';
 import { GinkgoRunTestCodeLensProvider } from './ginkgoRunTestCodelensProvider';
 import { GinkgoNode } from './ginkgoNode';
 import { GinkgoTest } from './ginkgoTest';
@@ -124,6 +123,7 @@ export class GinkgoTestExplorer {
         context.subscriptions.push(vscode.commands.registerCommand('ginkgotestexplorer.generateSuiteCoverage', this.onGenerateSuiteCoverage.bind(this)));
         context.subscriptions.push(vscode.commands.registerCommand('ginkgotestexplorer.gotoSymbolInEditor', this.onGotoSymbolInEditor.bind(this)));
         context.subscriptions.push(vscode.commands.registerCommand("ginkgotestexplorer.runSuiteTest", this.onRunSuiteTest.bind(this)));
+        context.subscriptions.push(vscode.commands.registerCommand("ginkgotestexplorer.runAllProjectTests", this.onRunAllProjectTests.bind(this)));
         context.subscriptions.push(vscode.commands.registerCommand("ginkgotestexplorer.showTestoutput", this.onShowTestOutput.bind(this)));
     }
 
@@ -192,6 +192,22 @@ export class GinkgoTestExplorer {
         } else {
             outputChannel.appendLine('Did not run test: no active text editor.');
         }
+    }
+
+    private async onRunAllProjectTests() {
+        // TODO: run simultaneos.
+        this.statusBar.showRunningCommandBar("all project tests");
+        outputChannel.clear();
+
+        outputChannel.appendLine('Running all project tests...');
+        try {
+            const result = this.ginkgoTest.runGoTest();
+            outputChannel.appendLine(result);
+            outputChannel.appendLine('Project tests have been run.');
+        } catch (err) {
+            outputChannel.appendLine(`Error while running all project tests: ${err}.`);
+        }
+        this.statusBar.hideRunningCommandBar();
     }
 
     private async onGotoSymbolInEditor() {
