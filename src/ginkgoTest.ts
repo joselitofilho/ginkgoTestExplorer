@@ -7,7 +7,7 @@ import * as path from "path";
 import * as junit2json from 'junit2json';
 import { Commands } from './commands';
 import { TestResult } from './testResult';
-import { outputChannel } from './ginkgoTestExplorer';
+import { constants } from './constants';
 
 const coverageHTML = "coverage.html";
 const coverageOut = "coverage.out";
@@ -15,7 +15,7 @@ const coverageOut = "coverage.out";
 export class GinkgoTest {
     private cwd: string;
 
-    constructor(private ginkgoPath: string, private commands: Commands, private workspaceFolder?: vscode.WorkspaceFolder) {
+    constructor(private ginkgoPath: string, private commands: Commands, private testEnvVars: {}, private testEnvFile: string, private workspaceFolder?: vscode.WorkspaceFolder) {
         this.cwd = '';
         if (workspaceFolder) {
             this.cwd = workspaceFolder.uri.fsPath;
@@ -24,6 +24,14 @@ export class GinkgoTest {
 
     public setGinkgoPath(ginkgoPath: string) {
         this.ginkgoPath = ginkgoPath;
+    }
+
+    public setTestEnvVars(testEnvVars: {}) {
+        this.testEnvVars = testEnvVars;
+    }
+
+    public setTestEnvFile(testEnvFile: string) {
+        this.testEnvFile = testEnvFile;
     }
 
     public runGoTest(): string {
@@ -78,9 +86,9 @@ export class GinkgoTest {
             request: 'launch',
             mode: 'auto',
             program: document?.fileName,
-            args: debugArgs,
-            // env: [],
-            // envFile: [],
+            env: this.testEnvVars || constants.defaultTestEnvVars,
+            envFile: this.testEnvFile || constants.defaultTestEnvFile,
+            args: debugArgs
         };
         let workspaceFolder = this.workspaceFolder;
         if (document) {

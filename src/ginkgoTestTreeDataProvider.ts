@@ -8,9 +8,8 @@ import { Commands } from './commands';
 import { outputChannel } from './ginkgoTestExplorer';
 import { TestResult } from './testResult';
 import { GinkgoNode, isRootNode, isRunnableTest, isWrenchNode } from './ginkgoNode';
-import { GO_MODE } from './ginkgoTestExplorer';
+import { GO_MODE, UpdateOn } from './constants';
 
-type UpdateOn = 'onSave' | 'onType';
 export class GinkgoTestTreeDataProvider implements vscode.TreeDataProvider<GinkgoNode> {
 
     private readonly _onDidChangeTreeData: vscode.EventEmitter<GinkgoNode | undefined> = new vscode.EventEmitter<GinkgoNode | undefined>();
