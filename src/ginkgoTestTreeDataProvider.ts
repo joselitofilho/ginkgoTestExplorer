@@ -5,7 +5,7 @@ import * as outliner from './ginkgoOutliner';
 import * as editorUtil from './util/editor';
 import * as decorationUtil from './util/decoration';
 import { Commands } from './commands';
-import { outputChannel } from './ginkgoTestExplorer';
+import { checkGinkgoIsInstalled, outputChannel } from './ginkgoTestExplorer';
 import { TestResult } from './testResult';
 import { GinkgoNode, isRootNode, isRunnableTest, isWrenchNode } from './ginkgoNode';
 import { GO_MODE, UpdateOn } from './constants';
@@ -147,6 +147,7 @@ export class GinkgoTestTreeDataProvider implements vscode.TreeDataProvider<Ginkg
                 this._roots = outline.nested;
                 this.onDicoveredTest(outline.flat);
             } catch (err) {
+                checkGinkgoIsInstalled();
                 outputChannel.appendLine(`Could not populate the outline view: ${err}`);
                 void vscode.window.showErrorMessage('Could not populate the outline view', ...['Open Log']).then(action => {
                     if (action === 'Open Log') {

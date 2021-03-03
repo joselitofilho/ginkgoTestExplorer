@@ -141,30 +141,15 @@ export class GinkgoTest {
     }
 
     public async checkGinkgoIsInstalled(ginkgoPath: string): Promise<boolean> {
-        try {
-            await this.execCommand(`${ginkgoPath} help`);
-            return true;
-        } catch (err) {
-            return false;
-        }
+        return await this.execCommand(`${ginkgoPath} help`);
     }
 
     public async callGinkgoInstall(): Promise<boolean> {
-        try {
-            await this.execCommand(`go get github.com/onsi/ginkgo/ginkgo`);
-            return true;
-        } catch (err) {
-            return false;
-        }
+        return await this.execCommand(`go get github.com/onsi/ginkgo/ginkgo`);;
     }
 
     public async callGomegaInstall(): Promise<boolean> {
-        try {
-            await this.execCommand(`go get github.com/onsi/gomega/...`);
-            return true;
-        } catch (err) {
-            return false;
-        }
+        return await this.execCommand(`go get github.com/onsi/gomega/...`);
     }
 
     private async waitForReportFile(file: string): Promise<string> {
@@ -226,8 +211,8 @@ export class GinkgoTest {
         return coverageDir;
     }
 
-    private async execCommand(command: string) {
-        await new Promise<boolean>(async (resolve, reject) => {
+    private async execCommand(command: string): Promise<boolean> {
+        return await new Promise<boolean>(async (resolve, reject) => {
             try {
                 const tp = cp.spawn(command, { shell: true });
                 tp.stdout.on('data', (chunk) => outputChannel.appendLine(chunk.toString()));
