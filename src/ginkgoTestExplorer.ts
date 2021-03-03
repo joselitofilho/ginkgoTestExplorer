@@ -167,18 +167,15 @@ export class GinkgoTestExplorer {
     }
 
     private async onRunTest(testNode: GinkgoNode, mode: string) {
-        await new Promise<boolean>(async resolve => {
-            this.ginkgoTestTreeDataProvider.prepareToRunTest(testNode);
-            resolve(true);
-        });
+        this.ginkgoTestTreeDataProvider.prepareToRunTest(testNode);
 
         const editor = vscode.window.activeTextEditor;
         switch (mode) {
             case 'run':
-                await this.ginkgoTest.runTest(editor?.document, testNode.key);
+                await this.ginkgoTest.runTest(testNode.key, editor?.document);
                 break;
             case 'debug':
-                await this.ginkgoTest.debugTest(editor?.document, testNode.key);
+                await this.ginkgoTest.debugTest(testNode.key, editor?.document);
                 break;
         }
     }
@@ -210,9 +207,7 @@ export class GinkgoTestExplorer {
 
             outputChannel.appendLine('Running all project tests...');
             try {
-                const result = this.ginkgoTest.runGoTest();
-                outputChannel.appendLine(result);
-                outputChannel.appendLine('Project tests have been run.');
+                await this.ginkgoTest.runGoTest();
             } catch (err) {
                 outputChannel.appendLine(`Error while running all project tests: ${err}.`);
                 reject(err);
@@ -237,7 +232,7 @@ export class GinkgoTestExplorer {
 
                 outputChannel.appendLine('Generating suite coverage results...');
                 try {
-                    const output = this.ginkgoTest.generateCoverage(document);
+                    const output = await this.ginkgoTest.generateCoverage(document);
                     const viewPanel = vscode.window.createWebviewPanel('Coverage', `Coverage results: ${rootNode.text}`, { viewColumn: vscode.ViewColumn.Two, preserveFocus: true }, { enableScripts: true });
                     viewPanel.webview.html = output;
                     outputChannel.appendLine('Suite coverage has been generated.');
@@ -264,9 +259,9 @@ export class GinkgoTestExplorer {
 
             outputChannel.appendLine('Generating project coverage results...');
             try {
-                this.ginkgoTest.runGoTest();
+                await this.ginkgoTest.runGoTest();
 
-                const output = this.ginkgoTest.generateCoverage();
+                const output = await this.ginkgoTest.generateCoverage();
                 const viewPanel = vscode.window.createWebviewPanel('Coverage', 'Project coverage result', { viewColumn: vscode.ViewColumn.Two, preserveFocus: true }, { enableScripts: true });
                 viewPanel.webview.html = output;
                 outputChannel.appendLine('Project coverage has been generated.');
