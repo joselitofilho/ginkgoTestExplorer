@@ -12,6 +12,7 @@ import { outputChannel } from './ginkgoTestExplorer';
 
 const coverageHTML = "coverage.html";
 const coverageOut = "coverage.out";
+const ginkgoReport = "ginkgo.report";
 
 export class GinkgoTest {
     private cwd: string;
@@ -39,14 +40,21 @@ export class GinkgoTest {
         this.executeCommandsOn = executeCommandsOn;
     }
 
-    public runGoTest(): string {
+    public async runGoTest() {
         const cwd = this.cwd;
         const coverageDir = this.prepareCoverageDir(cwd);
-        const args = `test -coverpkg=./... -coverprofile=${coverageDir}/${coverageOut} -v -count=1 ./...`;
-        return cp.spawnSync("go", args.split(" "), { cwd }).stdout.toString();
+        const command = `go test -coverpkg=./... -coverprofile=${coverageDir}/${coverageOut} -v -count=1 ./...`;
+        outputChannel.appendLine(`${cwd}> ${command}`);
+        try {
+            await this.execCommand(`cd ${cwd} && ${command}`);
+            outputChannel.appendLine('Project tests have been run.');
+        } catch (err) {
+            outputChannel.appendLine(`Error: go test failed.`);
+            outputChannel.appendLine(err);
+        }
     }
 
-    public async runTest(document?: vscode.TextDocument, spec?: string): Promise<TestResult[]> {
+    public async runTest(spec: string, document?: vscode.TextDocument): Promise<TestResult[]> {
         let cwd = this.cwd;
         if (document) {
             cwd = path.dirname(document.fileName);
@@ -54,10 +62,11 @@ export class GinkgoTest {
         const reportFile = this.prepareReportFile(cwd);
         const coverageDir = this.prepareCoverageDir(cwd);
 
-        const focus = (spec) ? `-focus "${spec}"` : "";
-        const cover = `-cover -coverpkg=./... -coverprofile=${coverageDir}/${coverageOut}`;
         const report = `-reportFile ${reportFile}`;
+        const focus = `-focus "${spec}"`;
+        const cover = `-cover -coverpkg=./... -coverprofile=${coverageDir}/${coverageOut}`;
         const command = `${this.ginkgoPath} ${report} ${focus} ${cover} -r ${cwd}`;
+        let testResults: TestResult[] = [];
         if (this.executeCommandsOn === 'onTerminal') {
             let activeTerminal = vscode.window.terminals.find(t => t.name === "gte-bash");
             if (!activeTerminal) {
@@ -67,38 +76,36 @@ export class GinkgoTest {
                 activeTerminal.show(true);
                 activeTerminal.sendText('', true);
                 activeTerminal.sendText(`cd ${cwd} && ${command}`, true);
+
+                const xml = await this.waitForReportFile(reportFile);
+                testResults = await this.parseTestResults(xml);
             }
         } else {
-            new Promise<string>(async (resolve, reject) => {
-                outputChannel.show(true);
-                outputChannel.clear();
-                outputChannel.appendLine(`${cwd}> ${command}`);
-                try {
-                    const output = cp.execSync(`cd ${cwd} && ${command}`, { cwd }).toString();
-                    resolve(output);
-                } catch (err) {
-                    reject(err);
-                }
-            }).then(output => outputChannel.appendLine(output)).catch(err => outputChannel.appendLine(`Error: ${err}`));
+            outputChannel.show(true);
+            outputChannel.clear();
+            outputChannel.appendLine(`${cwd}> ${command}`);
+            try {
+                await this.execCommand(`cd ${cwd} && ${command}`);
+            } catch (err) {
+                outputChannel.appendLine(`Error: "${spec}" failed.`);
+                outputChannel.appendLine(err);
+            }
+
+            const xml = this.readReportFile(reportFile);
+            testResults = await this.parseTestResults(xml);
         }
-        const xml = await this.waitForReportFile(reportFile);
-        const testResults: TestResult[] = await this.parseTestResults(xml);
         this.commands.sendTestResults(testResults);
         return testResults;
     }
 
-    public async debugTest(document?: vscode.TextDocument, spec?: string): Promise<TestResult[]> {
+    public async debugTest(spec: string, document?: vscode.TextDocument): Promise<TestResult[]> {
         let cwd = this.cwd;
         if (document) {
             cwd = path.dirname(document.fileName);
         }
+
         const reportFile = this.prepareReportFile(cwd);
-
-        let debugArgs: any = [];
-        if (spec) {
-            debugArgs = ['-ginkgo.debug', '-ginkgo.reportFile', reportFile, '-ginkgo.focus', spec];
-        }
-
+        const debugArgs: any = ['-ginkgo.debug', '-ginkgo.reportFile', reportFile, '-ginkgo.focus', spec];
         const debugConfig: vscode.DebugConfiguration = {
             name: `Debug Test ${document?.fileName}`,
             type: 'go',
@@ -119,49 +126,45 @@ export class GinkgoTest {
         const testResults: TestResult[] = await this.parseTestResults(xml);
         this.commands.sendTestResults(testResults);
         return testResults;
-    }
+    }    
 
-    public generateCoverage(document?: vscode.TextDocument): string {
+    public async generateCoverage(document?: vscode.TextDocument): Promise<string> {
         let cwd = this.cwd;
         if (document) {
             cwd = path.dirname(document.fileName);
         }
         const coverageDir = path.normalize(path.join(cwd, 'coverage'));
-        cp.execSync(`go tool cover -html=${coverageDir}/${coverageOut} -o ${coverageDir}/${coverageHTML}`, { cwd });
+        const command = `go tool cover -html=${coverageDir}/${coverageOut} -o ${coverageDir}/${coverageHTML}`;
+        outputChannel.appendLine(`${cwd}> ${command}`);
+        await this.execCommand(`cd ${cwd} && ${command}`);
         return fs.readFileSync(`${coverageDir}/${coverageHTML}`, { encoding: 'utf8' });
     }
 
     public async checkGinkgoIsInstalled(ginkgoPath: string): Promise<boolean> {
-        return await new Promise<boolean>(resolve => {
-            cp.execFile(ginkgoPath, ['help'], {}, (err, stdout, stderr) => {
-                if (err) {
-                    return resolve(false);
-                }
-                return resolve(true);
-            });
-        });
+        try {
+            await this.execCommand(`${ginkgoPath} help`);
+            return true;
+        } catch (err) {
+            return false;
+        }
     }
 
     public async callGinkgoInstall(): Promise<boolean> {
-        return await new Promise<boolean>(resolve => {
-            cp.execFile("go", ['get', 'github.com/onsi/ginkgo/ginkgo'], {}, (err, stdout, stderr) => {
-                if (err) {
-                    return resolve(false);
-                }
-                return resolve(true);
-            });
-        });
+        try {
+            await this.execCommand(`go get github.com/onsi/ginkgo/ginkgo`);
+            return true;
+        } catch (err) {
+            return false;
+        }
     }
 
     public async callGomegaInstall(): Promise<boolean> {
-        return await new Promise<boolean>(resolve => {
-            cp.execFile("go", ['get', 'github.com/onsi/gomega/...'], {}, (err, stdout, stderr) => {
-                if (err) {
-                    return resolve(false);
-                }
-                return resolve(true);
-            });
-        });
+        try {
+            await this.execCommand(`go get github.com/onsi/gomega/...`);
+            return true;
+        } catch (err) {
+            return false;
+        }
     }
 
     private async waitForReportFile(file: string): Promise<string> {
@@ -198,7 +201,7 @@ export class GinkgoTest {
     }
 
     private prepareReportFile(cwd: string): string {
-        const reportFile = cwd + "/ginkgo.report";
+        const reportFile = `${cwd}/${ginkgoReport}`;
         if (fs.existsSync(reportFile)) {
             fs.unlinkSync(reportFile);
         }
@@ -221,6 +224,18 @@ export class GinkgoTest {
         }
 
         return coverageDir;
+    }
+
+    private async execCommand(command: string) {
+        await new Promise<boolean>(async (resolve, reject) => {
+            try {
+                const tp = cp.spawn(command, { shell: true });
+                tp.stdout.on('data', (chunk) => outputChannel.appendLine(chunk.toString()));
+                tp.on('close', code => resolve(code === 0));
+            } catch (err) {
+                reject(err);
+            }
+        });
     }
 
 }
