@@ -2,6 +2,10 @@
 
 All notable changes to the "ginkgotestexplorer" extension will be documented in this file.
 
+### v0.0.11
+
+- Fix freeze screen when running commands.
+
 ### v0.0.10
 
 - Creates a status bar for helping running project tests and coverage.
