@@ -126,6 +126,7 @@ export class GinkgoTestExplorer {
         context.subscriptions.push(vscode.commands.registerCommand("ginkgotestexplorer.runSuiteTest", this.onRunSuiteTest.bind(this)));
         context.subscriptions.push(vscode.commands.registerCommand("ginkgotestexplorer.runAllProjectTests", this.onRunAllProjectTests.bind(this)));
         context.subscriptions.push(vscode.commands.registerCommand("ginkgotestexplorer.showTestoutput", this.onShowTestOutput.bind(this)));
+        context.subscriptions.push(vscode.commands.registerCommand("ginkgotestexplorer.installDependencies", this.onInstallDependencies.bind(this)));
     }
 
     private async onShowTestOutput(testNode: GinkgoNode) {
@@ -267,12 +268,25 @@ export class GinkgoTestExplorer {
         }
     }
 
+    private async onInstallDependencies() {
+        this.statusBar.showRunningCommandBar("ginkgo help");
+        outputChannel.clear();
+        outputChannel.show();
+        await checkGinkgoIsInstalled();
+        this.statusBar.hideRunningCommandBar();
+    }
+
+}
+
+export function delay(ms: number) {
+    return new Promise( resolve => setTimeout(resolve, ms) );
 }
 
 export async function checkGinkgoIsInstalled() {
+    outputChannel.appendLine('Checking the Ginkgo executable was installed.');
     const isInstalled = await ginkgoTest.checkGinkgoIsInstalled(ginkgoPath);
     if (!isInstalled) {
-        outputChannel.appendLine(`Ginkgo was not found.`);
+        outputChannel.appendLine('Ginkgo executable was not found.');
         const action = await vscode.window.showInformationMessage('The Ginkgo executable was not found.', ...['Install']);
         if (action === 'Install') {
             outputChannel.show();
@@ -293,5 +307,7 @@ export async function checkGinkgoIsInstalled() {
                 outputChannel.appendLine('Error installing Ginkgo and Gomega.');
             }
         }
+    } else {
+        outputChannel.appendLine('Ginkgo executable already installed. ;)');
     }
 }

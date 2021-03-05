@@ -141,7 +141,7 @@ export class GinkgoTest {
     }
 
     public async checkGinkgoIsInstalled(ginkgoPath: string): Promise<boolean> {
-        return await this.execCommand(`${ginkgoPath} help`);
+        return await this.execCommand(`${ginkgoPath} help`, false);
     }
 
     public async callGinkgoInstall(): Promise<boolean> {
@@ -211,11 +211,13 @@ export class GinkgoTest {
         return coverageDir;
     }
 
-    private async execCommand(command: string): Promise<boolean> {
+    private async execCommand(command: string, showOutput: boolean | undefined = true): Promise<boolean> {
         return await new Promise<boolean>(async (resolve, reject) => {
             try {
                 const tp = cp.spawn(command, { shell: true });
-                tp.stdout.on('data', (chunk) => outputChannel.appendLine(chunk.toString()));
+                if (showOutput) {
+                    tp.stdout.on('data', (chunk) => outputChannel.appendLine(chunk.toString()));
+                }
                 tp.on('close', code => resolve(code === 0));
             } catch (err) {
                 reject(err);

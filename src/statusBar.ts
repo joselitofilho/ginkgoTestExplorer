@@ -43,7 +43,7 @@ export class StatusBar {
     }
 
     public onClickRunningCommandStatusBarItem() {
-        // vscode.window.activeTerminal?.show(true);
+        // TODO vscode.window.activeTerminal?.show(true);
         outputChannel.show(true);
     }
 

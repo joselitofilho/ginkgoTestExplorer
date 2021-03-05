@@ -44,6 +44,12 @@
         }
       ]
     },
+    "viewsWelcome": [
+      {
+        "view": "ginkgotestexplorer",
+        "contents": "Do you have ginkgo executable installed? [learn more](https://onsi.github.io/ginkgo/#getting-ginkgo).\n[Install executable](command:ginkgotestexplorer.installDependencies)"
+      }
+    ],
     "menus": {
       "view/title": [
         {
@@ -107,6 +113,10 @@
       {
         "command": "ginkgotestexplorer.gotoSymbolInEditor",
         "title": "Ginkgo: Go to symbol"
+      },
+      {
+        "command": "ginkgotestexplorer.installDependencies",
+        "title": "Ginkgo: Install dependencies"
       }
     ],
     "configuration": {
