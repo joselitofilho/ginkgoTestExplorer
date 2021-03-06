@@ -1,3 +1,5 @@
+'use strict';
+
 export class Icons {
     public static get listTree(): string {
         return "listTree.svg";
