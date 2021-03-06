@@ -8,21 +8,35 @@ import * as junit2json from 'junit2json';
 import { Commands } from './commands';
 import { TestResult } from './testResult';
 import { constants, ExecuteCommandsOn } from './constants';
-import { outputChannel } from './ginkgoTestExplorer';
+import { affectsConfiguration, getConfiguration, outputChannel } from './ginkgoTestExplorer';
 
 const coverageHTML = "coverage.html";
 const coverageOut = "coverage.out";
 const ginkgoReport = "ginkgo.report";
-const gteBash = "gte-bash"
+const gteBash = "gte-bash";
 
 export class GinkgoTest {
     private cwd: string;
 
-    constructor(private ginkgoPath: string, private commands: Commands, private testEnvVars: {}, private testEnvFile: string, private executeCommandsOn: ExecuteCommandsOn, private workspaceFolder?: vscode.WorkspaceFolder) {
+    constructor(private context: vscode.ExtensionContext, private ginkgoPath: string, private commands: Commands, private testEnvVars: {}, private testEnvFile: string, private executeCommandsOn: ExecuteCommandsOn, private workspaceFolder?: vscode.WorkspaceFolder) {
         this.cwd = '';
         if (workspaceFolder) {
             this.cwd = workspaceFolder.uri.fsPath;
         }
+        context.subscriptions.push(vscode.workspace.onDidChangeConfiguration(evt => {
+            if (affectsConfiguration(evt, 'ginkgoPath')) {
+                this.setGinkgoPath(getConfiguration().get('ginkgoPath', constants.defaultGinkgoPath));
+            }
+            if (affectsConfiguration(evt, 'testEnvVars')) {
+                this.setTestEnvVars(getConfiguration().get('testEnvVars', constants.defaultTestEnvVars));
+            }
+            if (affectsConfiguration(evt, 'testEnvFile')) {
+                this.setTestEnvFile(getConfiguration().get('testEnvFile', constants.defaultTestEnvFile));
+            }
+            if (affectsConfiguration(evt, 'executeCommandsOn')) {
+                this.setExecuteCommandsOn(getConfiguration().get('executeCommandsOn', constants.defaultExecuteCommandsOn));
+            }
+        }));
     };
 
     public setGinkgoPath(ginkgoPath: string) {
@@ -144,7 +158,7 @@ export class GinkgoTest {
         const testResults: TestResult[] = await this.parseTestResults(xml);
         this.commands.sendTestResults(testResults);
         return testResults;
-    }    
+    }
 
     public async generateCoverage(document?: vscode.TextDocument): Promise<string> {
         let cwd = this.cwd;
@@ -158,15 +172,45 @@ export class GinkgoTest {
         return fs.readFileSync(`${coverageDir}/${coverageHTML}`, { encoding: 'utf8' });
     }
 
-    public async checkGinkgoIsInstalled(ginkgoPath: string): Promise<boolean> {
+    public async checkGinkgoIsInstalled(ginkgoPath: string) {
+        outputChannel.appendLine('Checking the Ginkgo executable was installed.');
+        const isInstalled = await this.callGinkgoHelp(ginkgoPath);
+        if (!isInstalled) {
+            outputChannel.appendLine('Ginkgo executable was not found.');
+            const action = await vscode.window.showInformationMessage('The Ginkgo executable was not found.', ...['Install']);
+            if (action === 'Install') {
+                outputChannel.show();
+                outputChannel.appendLine('Installing Ginkgo and Gomega.');
+                outputChannel.appendLine('go get github.com/onsi/ginkgo/ginkgo');
+                outputChannel.appendLine('go get github.com/onsi/gomega/...');
+                outputChannel.appendLine('Please wait...');
+                let installed = await this.callGinkgoInstall();
+                if (installed) {
+                    outputChannel.appendLine('Ginkgo has been installed successfully.');
+                    installed = await this.callGomegaInstall();
+                    if (installed) {
+                        outputChannel.appendLine('Gomega has been installed successfully.');
+                    } else {
+                        outputChannel.appendLine('Error installing Ginkgo and Gomega.');
+                    }
+                } else {
+                    outputChannel.appendLine('Error installing Ginkgo and Gomega.');
+                }
+            }
+        } else {
+            outputChannel.appendLine('Ginkgo executable already installed. ;)');
+        }
+    }
+
+    private async callGinkgoHelp(ginkgoPath: string): Promise<boolean> {
         return await this.execCommand(`${ginkgoPath} help`, this.cwd, false);
     }
 
-    public async callGinkgoInstall(): Promise<boolean> {
+    private async callGinkgoInstall(): Promise<boolean> {
         return await this.execCommand('go get github.com/onsi/ginkgo/ginkgo', this.cwd);
     }
 
-    public async callGomegaInstall(): Promise<boolean> {
+    private async callGomegaInstall(): Promise<boolean> {
         return await this.execCommand('go get github.com/onsi/gomega/...', this.cwd);
     }
 
