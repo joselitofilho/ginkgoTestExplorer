@@ -1,3 +1,5 @@
+'use strict';
+
 import { EventEmitter, Event } from "vscode";
 import { GinkgoNode } from "./ginkgoNode";
 import { TestResult } from "./testResult";
