@@ -46,7 +46,7 @@ export class GinkgoTest {
         const command = `go test -coverpkg=./... -coverprofile=${coverageDir}/${coverageOut} -v -count=1 ./...`;
         outputChannel.appendLine(`${cwd}> ${command}`);
         try {
-            await this.execCommand(`cd ${cwd} && ${command}`);
+            await this.execCommand(command, cwd);
             outputChannel.appendLine('Project tests have been run.');
         } catch (err) {
             outputChannel.appendLine(`Error: go test failed.`);
@@ -85,7 +85,7 @@ export class GinkgoTest {
             outputChannel.clear();
             outputChannel.appendLine(`${cwd}> ${command}`);
             try {
-                await this.execCommand(`cd ${cwd} && ${command}`);
+                await this.execCommand(command, cwd);
             } catch (err) {
                 outputChannel.appendLine(`Error: "${spec}" failed.`);
                 outputChannel.appendLine(err);
@@ -136,20 +136,20 @@ export class GinkgoTest {
         const coverageDir = path.normalize(path.join(cwd, 'coverage'));
         const command = `go tool cover -html=${coverageDir}/${coverageOut} -o ${coverageDir}/${coverageHTML}`;
         outputChannel.appendLine(`${cwd}> ${command}`);
-        await this.execCommand(`cd ${cwd} && ${command}`);
+        await this.execCommand(command, cwd);
         return fs.readFileSync(`${coverageDir}/${coverageHTML}`, { encoding: 'utf8' });
     }
 
     public async checkGinkgoIsInstalled(ginkgoPath: string): Promise<boolean> {
-        return await this.execCommand(`${ginkgoPath} help`, false);
+        return await this.execCommand(`${ginkgoPath} help`, this.cwd, false);
     }
 
     public async callGinkgoInstall(): Promise<boolean> {
-        return await this.execCommand(`go get github.com/onsi/ginkgo/ginkgo`);;
+        return await this.execCommand('go get github.com/onsi/ginkgo/ginkgo', this.cwd);
     }
 
     public async callGomegaInstall(): Promise<boolean> {
-        return await this.execCommand(`go get github.com/onsi/gomega/...`);
+        return await this.execCommand('go get github.com/onsi/gomega/...', this.cwd);
     }
 
     private async waitForReportFile(file: string): Promise<string> {
@@ -211,10 +211,12 @@ export class GinkgoTest {
         return coverageDir;
     }
 
-    private async execCommand(command: string, showOutput: boolean | undefined = true): Promise<boolean> {
+    private async execCommand(command: string, cwd: string, showOutput: boolean | undefined = true): Promise<boolean> {
         return await new Promise<boolean>(async (resolve, reject) => {
             try {
-                const tp = cp.spawn(command, { shell: true });
+                const commandSplit: string[] = command.split(" ");
+                // const tp = cp.spawn(command, { shell: true });
+                const tp = cp.spawn(commandSplit[0], commandSplit.slice(1), { shell: true, cwd });
                 if (showOutput) {
                     tp.stdout.on('data', (chunk) => outputChannel.appendLine(chunk.toString()));
                 }
