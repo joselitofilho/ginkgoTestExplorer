@@ -13,6 +13,7 @@ import { outputChannel } from './ginkgoTestExplorer';
 const coverageHTML = "coverage.html";
 const coverageOut = "coverage.out";
 const ginkgoReport = "ginkgo.report";
+const gteBash = "gte-bash"
 
 export class GinkgoTest {
     private cwd: string;
@@ -40,17 +41,34 @@ export class GinkgoTest {
         this.executeCommandsOn = executeCommandsOn;
     }
 
+    public async runGoTestOnOutputChannel() {
+        const cwd = this.cwd;
+        const coverageDir = this.prepareCoverageDir(cwd);
+        const outputTestFile = `${coverageDir}/${coverageOut}`;
+        const command = `go test -coverpkg=./... -coverprofile=${outputTestFile} -count=1 ./...`;
+        await this.execGoTestOnOutputChannel(command);
+    }
+
     public async runGoTest() {
         const cwd = this.cwd;
         const coverageDir = this.prepareCoverageDir(cwd);
-        const command = `go test -coverpkg=./... -coverprofile=${coverageDir}/${coverageOut} -v -count=1 ./...`;
-        outputChannel.appendLine(`${cwd}> ${command}`);
-        try {
-            await this.execCommand(command, cwd);
-            outputChannel.appendLine('Project tests have been run.');
-        } catch (err) {
-            outputChannel.appendLine(`Error: go test failed.`);
-            outputChannel.appendLine(err);
+        const outputTestFile = `${coverageDir}/${coverageOut}`;
+        const command = `go test -coverpkg=./... -coverprofile=${outputTestFile} -count=1 ./...`;
+
+        if (this.executeCommandsOn === 'onTerminal') {
+            let activeTerminal = vscode.window.terminals.find(t => t.name === gteBash);
+            if (activeTerminal) {
+                activeTerminal.dispose();
+            }
+            activeTerminal = vscode.window.createTerminal({ name: gteBash, cwd });
+            if (activeTerminal) {
+                activeTerminal.show(true);
+                activeTerminal.sendText(`${command}`, true);
+                outputChannel.appendLine(`Project tests running on the '${gteBash}' terminal.`);
+            }
+        } else {
+            outputChannel.show(true);
+            await this.execGoTestOnOutputChannel(command);
         }
     }
 
@@ -68,14 +86,14 @@ export class GinkgoTest {
         const command = `${this.ginkgoPath} ${report} ${focus} ${cover} -r ${cwd}`;
         let testResults: TestResult[] = [];
         if (this.executeCommandsOn === 'onTerminal') {
-            let activeTerminal = vscode.window.terminals.find(t => t.name === "gte-bash");
-            if (!activeTerminal) {
-                activeTerminal = vscode.window.createTerminal({ name: "gte-bash", cwd });
+            let activeTerminal = vscode.window.terminals.find(t => t.name === gteBash);
+            if (activeTerminal) {
+                activeTerminal.dispose();
             }
+            activeTerminal = vscode.window.createTerminal({ name: gteBash, cwd });
             if (activeTerminal) {
                 activeTerminal.show(true);
-                activeTerminal.sendText('', true);
-                activeTerminal.sendText(`cd ${cwd} && ${command}`, true);
+                activeTerminal.sendText(`${command}`, true);
 
                 const xml = await this.waitForReportFile(reportFile);
                 testResults = await this.parseTestResults(xml);
@@ -225,6 +243,18 @@ export class GinkgoTest {
                 reject(err);
             }
         });
+    }
+
+    private async execGoTestOnOutputChannel(command: string) {
+        const cwd = this.cwd;
+        outputChannel.appendLine(`${cwd}> ${command}`);
+        try {
+            await this.execCommand(command, cwd);
+            outputChannel.appendLine('Project tests have been run.');
+        } catch (err) {
+            outputChannel.appendLine(`Error: go test failed.`);
+            outputChannel.appendLine(err);
+        }
     }
 
 }
