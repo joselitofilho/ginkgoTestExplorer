@@ -25,12 +25,12 @@ export let outputChannel: vscode.OutputChannel;
 
 export class GinkgoTestExplorer {
 
-    private cachingOutliner: CachingOutliner;
     private testTreeDataExplorer: GinkgoTestTreeDataExplorer;
     private outliner: GinkgoOutliner;
     private statusBar: StatusBar;
     private ginkgoPath: string;
     private ginkgoTest: GinkgoTest;
+    private fnOutlineFromDoc: { (doc: vscode.TextDocument): Promise<GinkgoOutline> };
 
     readonly commands: Commands;
     constructor(context: vscode.ExtensionContext) {
@@ -56,21 +56,10 @@ export class GinkgoTestExplorer {
         context.subscriptions.push(this.commands.checkGinkgoIsInstalledEmitter(this.onCheckGinkgoIsInstalledEmitter.bind(this), this));
 
         this.outliner = new GinkgoOutliner(this.ginkgoPath, this.commands);
-        this.cachingOutliner = new CachingOutliner(this.outliner, getConfiguration().get('cacheTTL', constants.defaultCacheTTL));
-        context.subscriptions.push({ dispose: () => { this.cachingOutliner.clear(); } });
-        context.subscriptions.push(vscode.workspace.onDidChangeConfiguration(evt => {
-            if (affectsConfiguration(evt, 'ginkgoPath')) {
-                this.outliner.setGinkgoPath(getConfiguration().get('ginkgoPath', constants.defaultGinkgoPath));
-                this.cachingOutliner.setOutliner(this.outliner);
-            }
-            if (affectsConfiguration(evt, 'cacheTTL')) {
-                this.cachingOutliner.setCacheTTL(getConfiguration().get('cacheTTL', constants.defaultCacheTTL));
-            }
-        }));
+        const cachingOutliner = new CachingOutliner(context, this.outliner, getConfiguration().get('cacheTTL', constants.defaultCacheTTL));
+        this.fnOutlineFromDoc = doc => cachingOutliner.fromDocument(doc);
 
-        const fnOutlineFromDoc: { (doc: vscode.TextDocument): Promise<GinkgoOutline> } = doc => this.cachingOutliner.fromDocument(doc);
-
-        this.testTreeDataExplorer = new GinkgoTestTreeDataExplorer(context, this.commands, fnOutlineFromDoc);
+        this.testTreeDataExplorer = new GinkgoTestTreeDataExplorer(context, this.commands, this.fnOutlineFromDoc);
         new GinkgoTestFilesExplorer(context);
 
         const fnRunTest: { (args: { testNode: GinkgoNode, mode: string }): void } = (args) => {
@@ -78,7 +67,7 @@ export class GinkgoTestExplorer {
                 this.onRunTest(args.testNode, args.mode);
             }
         };
-        new GinkgoRunTestCodeLensProvider(context, fnOutlineFromDoc, fnRunTest);
+        new GinkgoRunTestCodeLensProvider(context, this.fnOutlineFromDoc, fnRunTest);
 
         this.statusBar = new StatusBar(context, 'ginkgotestexplorer.runAllProjectTests', 'ginkgotestexplorer.generateProjectCoverage');
 
@@ -217,7 +206,7 @@ export class GinkgoTestExplorer {
             return;
         }
         try {
-            await symbolPicker.fromTextEditor(vscode.window.activeTextEditor, doc => this.cachingOutliner.fromDocument(doc));
+            await symbolPicker.fromTextEditor(vscode.window.activeTextEditor, this.fnOutlineFromDoc);
         } catch (err) {
             outputChannel.appendLine(`Could not create the Go To Symbol menu: ${err}`);
             const action = await vscode.window.showErrorMessage('Could not create the Go To Symbol menu', ...['Open Log']);
