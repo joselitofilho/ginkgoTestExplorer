@@ -51,7 +51,7 @@ export class GinkgoTestExplorer {
             workspaceFolder = vscode.workspace.workspaceFolders[0];
         }
 
-        this.ginkgoTest = new GinkgoTest(context, this.ginkgoPath, this.commands, getConfiguration().get('testEnvVars', constants.defaultTestEnvVars), getConfiguration().get('testEnvFile', constants.defaultTestEnvFile), getConfiguration().get('executeCommandsOn', constants.defaultExecuteCommandsOn), workspaceFolder);
+        this.ginkgoTest = new GinkgoTest(context, this.ginkgoPath, this.commands, workspaceFolder);
 
         context.subscriptions.push(this.commands.checkGinkgoIsInstalledEmitter(this.onCheckGinkgoIsInstalledEmitter.bind(this), this));
 
