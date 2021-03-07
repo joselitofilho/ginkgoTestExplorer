@@ -296,21 +296,4 @@ export class GinkgoTestTreeDataExplorer {
         return this.treeDataProvider;
     }
 
-    public async onRunTest(ginkgoTest: GinkgoTest, testNode: GinkgoNode, mode: string) {
-        this.treeDataProvider.prepareToRunTest(testNode);
-
-        const editor = vscode.window.activeTextEditor;
-        switch (mode) {
-            case 'run':
-                await ginkgoTest.runTest(testNode.key, editor?.document);
-                break;
-            case 'debug':
-                await ginkgoTest.debugTest(testNode.key, editor?.document);
-                break;
-        }
-    }
-
-    public async onRunTestTree(ginkgoTest: GinkgoTest, testNode: GinkgoNode) {
-        await this.onRunTest(ginkgoTest, testNode, 'run');
-    }
 }
