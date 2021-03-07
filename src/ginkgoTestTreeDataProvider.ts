@@ -5,7 +5,7 @@ import * as outliner from './ginkgoOutliner';
 import * as editorUtil from './util/editor';
 import * as decorationUtil from './util/decoration';
 import { Commands } from './commands';
-import { affectsConfiguration, getConfiguration, ginkgoTest, outputChannel } from './ginkgoTestExplorer';
+import { affectsConfiguration, getConfiguration, outputChannel } from './ginkgoTestExplorer';
 import { TestResult } from './testResult';
 import { GinkgoNode, isRootNode, isRunnableTest, isWrenchNode } from './ginkgoNode';
 import { constants, GO_MODE, UpdateOn } from './constants';
@@ -29,7 +29,7 @@ export class GinkgoTestTreeDataProvider implements vscode.TreeDataProvider<Ginkg
 
     private documentChangedTimer?: NodeJS.Timeout;
 
-    constructor(private context: vscode.ExtensionContext, private ginkgoPath: string, private commands: Commands, private readonly outlineFromDoc: { (doc: vscode.TextDocument): Promise<outliner.GinkgoOutline> }, private readonly clickTreeItemCommand: string, private updateOn: UpdateOn, private updateOnTypeDelay: number, private doubleClickThreshold: number) {
+    constructor(private context: vscode.ExtensionContext, private commands: Commands, private readonly outlineFromDoc: { (doc: vscode.TextDocument): Promise<outliner.GinkgoOutline> }, private readonly clickTreeItemCommand: string, private updateOn: UpdateOn, private updateOnTypeDelay: number, private doubleClickThreshold: number) {
         // context.subscriptions.push(commands.discoveredTest(this.onDicoveredTest, this));
         context.subscriptions.push(commands.testRunStarted(this.onTestRunStarted, this));
         context.subscriptions.push(commands.testResults(this.onTestResult, this));
@@ -52,10 +52,6 @@ export class GinkgoTestTreeDataProvider implements vscode.TreeDataProvider<Ginkg
 
     get rootNode(): GinkgoNode | undefined {
         return this._rootNode;
-    }
-
-    public setGinkgoPath(ginkgoPath: string) {
-        this.ginkgoPath = ginkgoPath;
     }
 
     public setUpdateOn(updateOn: UpdateOn) {
@@ -151,8 +147,7 @@ export class GinkgoTestTreeDataProvider implements vscode.TreeDataProvider<Ginkg
                 this._roots = outline.nested;
                 this.onDicoveredTest(outline.flat);
             } catch (err) {
-                // TODO move to commands
-                ginkgoTest.checkGinkgoIsInstalled(this.ginkgoPath);
+                this.commands.sendCheckGinkgoIsInstalledEmitter();
                 outputChannel.appendLine(`Could not populate the outline view: ${err}`);
                 void vscode.window.showErrorMessage('Could not populate the outline view', ...['Open Log']).then(action => {
                     if (action === 'Open Log') {
@@ -276,17 +271,14 @@ function isMainEditor(editor: vscode.TextEditor): boolean {
 export class GinkgoTestTreeDataExplorer {
     private treeDataProvider: GinkgoTestTreeDataProvider;
 
-	constructor(context: vscode.ExtensionContext, ginkgoPath: string, commands: Commands, fnOutlineFromDoc: { (doc: vscode.TextDocument): Promise<outliner.GinkgoOutline> }) {
-        this.treeDataProvider = new GinkgoTestTreeDataProvider(context, ginkgoPath, commands, fnOutlineFromDoc, 'ginkgotestexplorer.clickTreeItem',
+	constructor(context: vscode.ExtensionContext, commands: Commands, fnOutlineFromDoc: { (doc: vscode.TextDocument): Promise<outliner.GinkgoOutline> }) {
+        this.treeDataProvider = new GinkgoTestTreeDataProvider(context, commands, fnOutlineFromDoc, 'ginkgotestexplorer.clickTreeItem',
             getConfiguration().get('updateOn', constants.defaultUpdateOn),
             getConfiguration().get('updateOnTypeDelay', constants.defaultUpdateOnTypeDelay),
             getConfiguration().get('doubleClickThreshold', constants.defaultDoubleClickThreshold),
         );
         context.subscriptions.push(vscode.window.createTreeView('ginkgotestexplorer', { treeDataProvider: this.treeDataProvider, showCollapseAll: true, canSelectMany: false }));
         context.subscriptions.push(vscode.workspace.onDidChangeConfiguration(evt => {
-            if (affectsConfiguration(evt, 'ginkgoPath')) {
-                this.treeDataProvider.setGinkgoPath(getConfiguration().get('ginkgoPath', constants.defaultGinkgoPath));
-            }
             if (affectsConfiguration(evt, 'updateOn')) {
                 this.treeDataProvider.setUpdateOn(getConfiguration().get('updateOn', constants.defaultUpdateOn));
             }

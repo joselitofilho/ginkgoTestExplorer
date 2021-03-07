@@ -22,7 +22,6 @@ export function affectsConfiguration(evt: vscode.ConfigurationChangeEvent, name:
 }
 
 export let outputChannel: vscode.OutputChannel;
-export let ginkgoTest: GinkgoTest;
 
 export class GinkgoTestExplorer {
 
@@ -32,6 +31,7 @@ export class GinkgoTestExplorer {
     private outliner: GinkgoOutliner;
     private statusBar: StatusBar;
     private ginkgoPath: string;
+    private ginkgoTest: GinkgoTest;
 
     readonly commands: Commands;
     constructor(context: vscode.ExtensionContext) {
@@ -52,7 +52,9 @@ export class GinkgoTestExplorer {
             workspaceFolder = vscode.workspace.workspaceFolders[0];
         }
 
-        ginkgoTest = new GinkgoTest(context, this.ginkgoPath, this.commands, getConfiguration().get('testEnvVars', constants.defaultTestEnvVars), getConfiguration().get('testEnvFile', constants.defaultTestEnvFile), getConfiguration().get('executeCommandsOn', constants.defaultExecuteCommandsOn), workspaceFolder);
+        this.ginkgoTest = new GinkgoTest(context, this.ginkgoPath, this.commands, getConfiguration().get('testEnvVars', constants.defaultTestEnvVars), getConfiguration().get('testEnvFile', constants.defaultTestEnvFile), getConfiguration().get('executeCommandsOn', constants.defaultExecuteCommandsOn), workspaceFolder);
+
+        context.subscriptions.push(this.commands.checkGinkgoIsInstalledEmitter(this.onCheckGinkgoIsInstalledEmitter.bind(this), this));
 
         this.outliner = new GinkgoOutliner(this.ginkgoPath, this.commands);
         this.cachingOutliner = new CachingOutliner(this.outliner, getConfiguration().get('cacheTTL', constants.defaultCacheTTL));
@@ -69,7 +71,7 @@ export class GinkgoTestExplorer {
 
         const fnOutlineFromDoc: { (doc: vscode.TextDocument): Promise<GinkgoOutline> } = doc => this.cachingOutliner.fromDocument(doc);
 
-        this.testTreeDataExplorer = new GinkgoTestTreeDataExplorer(context, this.ginkgoPath, this.commands, fnOutlineFromDoc);
+        this.testTreeDataExplorer = new GinkgoTestTreeDataExplorer(context, this.commands, fnOutlineFromDoc);
         new GinkgoTestFilesExplorer(context);
 
         this.ginkgoTestCodeLensProvider = new GinkgoRunTestCodeLensProvider(fnOutlineFromDoc);
@@ -81,7 +83,7 @@ export class GinkgoTestExplorer {
         }));
         context.subscriptions.push(vscode.commands.registerCommand("ginkgotestexplorer.runTest.codelens", (args) => {
             if (args && args.testNode && args.mode) {
-                this.testTreeDataExplorer.onRunTest(ginkgoTest, args.testNode, args.mode);
+                this.testTreeDataExplorer.onRunTest(this.ginkgoTest, args.testNode, args.mode);
             }
         }));
         this.ginkgoTestCodeLensProvider.setEnabled(getConfiguration().get('enableCodeLens', constants.defaultEnableCodeLens));
@@ -101,6 +103,10 @@ export class GinkgoTestExplorer {
         context.subscriptions.push(vscode.commands.registerCommand("ginkgotestexplorer.runAllProjectTests", this.onRunAllProjectTests.bind(this)));
         context.subscriptions.push(vscode.commands.registerCommand("ginkgotestexplorer.showTestoutput", this.onShowTestOutput.bind(this)));
         context.subscriptions.push(vscode.commands.registerCommand("ginkgotestexplorer.installDependencies", this.onInstallDependencies.bind(this)));
+    }
+
+    private async onCheckGinkgoIsInstalledEmitter() {
+        this.ginkgoTest.checkGinkgoIsInstalled(this.ginkgoPath);
     }
 
     private async onShowTestOutput(testNode: GinkgoNode) {
@@ -123,7 +129,7 @@ export class GinkgoTestExplorer {
             }
             if (rootNode) {
                 this.testTreeDataExplorer.provider.prepareToRunTest(rootNode);
-                await this.testTreeDataExplorer.onRunTestTree(ginkgoTest, rootNode);
+                await this.testTreeDataExplorer.onRunTestTree(this.ginkgoTest, rootNode);
                 resolve(true);
             } else {
                 outputChannel.appendLine('Did not run test: no active text editor.');
@@ -139,7 +145,7 @@ export class GinkgoTestExplorer {
             outputChannel.clear();
             outputChannel.appendLine('Running all project tests...');
             try {
-                await ginkgoTest.runGoTest();
+                await this.ginkgoTest.runGoTest();
             } catch (err) {
                 outputChannel.appendLine(`Error while running all project tests: ${err}.`);
                 reject(err);
@@ -163,7 +169,7 @@ export class GinkgoTestExplorer {
 
                 outputChannel.appendLine('Generating suite coverage results...');
                 try {
-                    const output = await ginkgoTest.generateCoverage(document);
+                    const output = await this.ginkgoTest.generateCoverage(document);
                     const viewPanel = vscode.window.createWebviewPanel('Coverage', `Coverage results: ${rootNode.text}`, { viewColumn: vscode.ViewColumn.Two, preserveFocus: true }, { enableScripts: true });
                     viewPanel.webview.html = output;
                     outputChannel.appendLine('Suite coverage has been generated.');
@@ -190,9 +196,9 @@ export class GinkgoTestExplorer {
 
             outputChannel.appendLine('Generating project coverage results...');
             try {
-                await ginkgoTest.runGoTestOnOutputChannel();
+                await this.ginkgoTest.runGoTestOnOutputChannel();
 
-                const output = await ginkgoTest.generateCoverage();
+                const output = await this.ginkgoTest.generateCoverage();
                 const viewPanel = vscode.window.createWebviewPanel('Coverage', 'Project coverage result', { viewColumn: vscode.ViewColumn.Two, preserveFocus: true }, { enableScripts: true });
                 viewPanel.webview.html = output;
                 outputChannel.appendLine('Project coverage has been generated.');
@@ -225,7 +231,7 @@ export class GinkgoTestExplorer {
         this.statusBar.showRunningCommandBar("ginkgo help");
         outputChannel.clear();
         outputChannel.show();
-        await ginkgoTest.checkGinkgoIsInstalled(this.ginkgoPath);
+        await this.ginkgoTest.checkGinkgoIsInstalled(this.ginkgoPath);
         this.statusBar.hideRunningCommandBar();
     }
 
