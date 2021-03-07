@@ -79,7 +79,8 @@ export class GinkgoTestTreeDataProvider implements vscode.TreeDataProvider<Ginkg
     public prepareToRunTest(node: GinkgoNode) {
         this.discoveredTests.
             filter(test => test.key === node.key).
-            forEach(node => {this.commands.sendTestRunStarted(node);
+            forEach(node => {
+                this.commands.sendTestRunStarted(node);
                 if (node.nodes.length > 0 && !isWrenchNode(node)) {
                     node.nodes.forEach(n => {
                         if (!isWrenchNode(n)) {
@@ -271,8 +272,8 @@ function isMainEditor(editor: vscode.TextEditor): boolean {
 export class GinkgoTestTreeDataExplorer {
     private treeDataProvider: GinkgoTestTreeDataProvider;
 
-	constructor(context: vscode.ExtensionContext, commands: Commands, fnOutlineFromDoc: { (doc: vscode.TextDocument): Promise<outliner.GinkgoOutline> }) {
-        this.treeDataProvider = new GinkgoTestTreeDataProvider(context, commands, fnOutlineFromDoc, 'ginkgotestexplorer.clickTreeItem',
+    constructor(context: vscode.ExtensionContext, commands: Commands, outlineFromDoc: { (doc: vscode.TextDocument): Promise<outliner.GinkgoOutline> }, onRunTestTree: { (testNode: GinkgoNode): Promise<void> }) {
+        this.treeDataProvider = new GinkgoTestTreeDataProvider(context, commands, outlineFromDoc, 'ginkgotestexplorer.clickTreeItem',
             getConfiguration().get('updateOn', constants.defaultUpdateOn),
             getConfiguration().get('updateOnTypeDelay', constants.defaultUpdateOnTypeDelay),
             getConfiguration().get('doubleClickThreshold', constants.defaultDoubleClickThreshold),
@@ -289,8 +290,8 @@ export class GinkgoTestTreeDataExplorer {
                 this.treeDataProvider.setDoubleClickThreshold(getConfiguration().get('doubleClickThreshold', constants.defaultDoubleClickThreshold));
             }
         }));
-        context.subscriptions.push(vscode.commands.registerCommand("ginkgotestexplorer.runTest.tree", this.onRunTestTree.bind(this)));
-	}
+        context.subscriptions.push(vscode.commands.registerCommand("ginkgotestexplorer.runTest.tree", onRunTestTree));
+    }
 
     get provider(): GinkgoTestTreeDataProvider {
         return this.treeDataProvider;
