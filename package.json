@@ -70,6 +70,11 @@
           "command": "ginkgotestexplorer.gotoSymbolInEditor",
           "when": "view == ginkgotestexplorer",
           "group": "navigation@2"
+        },
+        {
+          "command": "ginkgotestfilesexplorer.refreshTreeFiles",
+          "when": "view == ginkgotestfilesexplorer",
+          "group": "navigation@0"
         }
       ],
       "view/item/context": [
@@ -135,6 +140,14 @@
       {
         "command": "ginkgotestfilesexplorer.openFile",
         "title": "open file"
+      },
+      {
+        "command": "ginkgotestfilesexplorer.refreshTreeFiles",
+        "title": "Ginkgo: Refresh test file tree",
+        "icon": {
+          "light": "resources/light/refresh.svg",
+          "dark": "resources/dark/refresh.svg"
+        }
       }
     ],
     "configuration": {

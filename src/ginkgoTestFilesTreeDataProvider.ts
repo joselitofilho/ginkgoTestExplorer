@@ -6,9 +6,11 @@ import * as fs from 'fs';
 import * as fileSystem from './util/fileSystem';
 
 export class GinkgoTestFilesTreeDataProvider implements vscode.TreeDataProvider<fileSystem.FileEntry>, vscode.FileSystemProvider {
+    private _onDidChangeTreeData: vscode.EventEmitter<fileSystem.FileEntry | undefined>;
     private _onDidChangeFile: vscode.EventEmitter<vscode.FileChangeEvent[]>;
 
     constructor() {
+        this._onDidChangeTreeData = new vscode.EventEmitter<fileSystem.FileEntry | undefined>();
         this._onDidChangeFile = new vscode.EventEmitter<vscode.FileChangeEvent[]>();
     }
 
@@ -18,6 +20,8 @@ export class GinkgoTestFilesTreeDataProvider implements vscode.TreeDataProvider<
 
     watch(uri: vscode.Uri, options: { recursive: boolean; excludes: string[]; }): vscode.Disposable {
         const watcher = fs.watch(uri.fsPath, { recursive: options.recursive }, async (event: string, filename: string | Buffer) => {
+            // outputChannel.appendLine(`fse.watch watcher emits event: ${event} on file ${filename}`);
+
             const filepath = path.join(uri.fsPath, fileSystem.normalizeNFC(filename.toString()));
 
             // TODO support excludes (using minimatch library?)
@@ -123,6 +127,10 @@ export class GinkgoTestFilesTreeDataProvider implements vscode.TreeDataProvider<
 
     // tree data provider
 
+    get onDidChangeTreeData(): vscode.Event<fileSystem.FileEntry | undefined> {
+        return this._onDidChangeTreeData.event;
+    }
+
     async getChildren(element?: fileSystem.FileEntry): Promise<fileSystem.FileEntry[]> {
         if (element) {
             const children = await this.readDirectory(element.uri);
@@ -152,16 +160,27 @@ export class GinkgoTestFilesTreeDataProvider implements vscode.TreeDataProvider<
         }
         return treeItem;
     }
+
+    refresh() {
+        this._onDidChangeTreeData.fire(undefined);
+    }
 }
 
 export class GinkgoTestFilesExplorer {
+    private treeDataProvider: GinkgoTestFilesTreeDataProvider;
+
     constructor(context: vscode.ExtensionContext) {
-        const treeDataProvider = new GinkgoTestFilesTreeDataProvider();
-        context.subscriptions.push(vscode.window.createTreeView('ginkgotestfilesexplorer', { treeDataProvider, showCollapseAll: true, canSelectMany: false }));
-        vscode.commands.registerCommand('ginkgotestfilesexplorer.openFile', (resource) => this.openResource(resource));
+        this.treeDataProvider = new GinkgoTestFilesTreeDataProvider();
+        context.subscriptions.push(vscode.window.createTreeView('ginkgotestfilesexplorer', { treeDataProvider: this.treeDataProvider, showCollapseAll: true, canSelectMany: false }));
+        context.subscriptions.push(vscode.commands.registerCommand('ginkgotestfilesexplorer.openFile', (resource) => this.openResource(resource)));
+        context.subscriptions.push(vscode.commands.registerCommand('ginkgotestfilesexplorer.refreshTreeFiles', this.onRefreshTreeFiles.bind(this)));
     }
 
     private openResource(resource: vscode.Uri): void {
         vscode.window.showTextDocument(resource);
+    }
+
+    private async onRefreshTreeFiles() {
+        this.treeDataProvider.refresh();
     }
 }

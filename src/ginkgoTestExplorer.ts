@@ -2,8 +2,8 @@
 
 import * as vscode from 'vscode';
 import * as symbolPicker from './symbolPicker';
-import { GinkgoTestTreeDataExplorer } from './ginkgoTestTreeDataProvider';
-import { GinkgoTestFilesExplorer } from './ginkgoTestFilesTreeDataProvider';
+import { GinkgoTestTreeDataExplorer as GinkgoTestNodeTreeExplorer } from './ginkgoTestTreeDataProvider';
+import { GinkgoTestFilesExplorer as GinkgoTestFileTreeExplorer } from './ginkgoTestFilesTreeDataProvider';
 import { GinkgoOutline, GinkgoOutliner } from './ginkgoOutliner';
 import { CachingOutliner } from './cachingOutliner';
 import { Commands } from './commands';
@@ -25,7 +25,7 @@ export let outputChannel: vscode.OutputChannel;
 
 export class GinkgoTestExplorer {
 
-    private testTreeDataExplorer: GinkgoTestTreeDataExplorer;
+    private testNodeTreeExplorer: GinkgoTestNodeTreeExplorer;
     private outliner: GinkgoOutliner;
     private statusBar: StatusBar;
     private ginkgoPath: string;
@@ -59,8 +59,8 @@ export class GinkgoTestExplorer {
         const cachingOutliner = new CachingOutliner(context, this.outliner, getConfiguration().get('cacheTTL', constants.defaultCacheTTL));
         this.fnOutlineFromDoc = doc => cachingOutliner.fromDocument(doc);
 
-        this.testTreeDataExplorer = new GinkgoTestTreeDataExplorer(context, this.commands, this.fnOutlineFromDoc, this.onRunTestTree.bind(this));
-        new GinkgoTestFilesExplorer(context);
+        this.testNodeTreeExplorer = new GinkgoTestNodeTreeExplorer(context, this.commands, this.fnOutlineFromDoc, this.onRunTestTree.bind(this));
+        new GinkgoTestFileTreeExplorer(context);
 
         new GinkgoRunTestCodeLensProvider(context, this.fnOutlineFromDoc, this.onRunTest.bind(this));
 
@@ -95,10 +95,10 @@ export class GinkgoTestExplorer {
         await new Promise<boolean>(async resolve => {
             outputChannel.clear();
             if (!rootNode) {
-                rootNode = this.testTreeDataExplorer.provider.rootNode;
+                rootNode = this.testNodeTreeExplorer.provider.rootNode;
             }
             if (rootNode) {
-                this.testTreeDataExplorer.provider.prepareToRunTest(rootNode);
+                this.testNodeTreeExplorer.provider.prepareToRunTest(rootNode);
                 await this.onRunTest(rootNode, 'run');
                 resolve(true);
             } else {
@@ -131,7 +131,7 @@ export class GinkgoTestExplorer {
             outputChannel.clear();
 
             const document = vscode.window.activeTextEditor?.document;
-            const rootNode = this.testTreeDataExplorer.provider.rootNode;
+            const rootNode = this.testNodeTreeExplorer.provider.rootNode;
             if (rootNode) {
                 this.statusBar.showRunningCommandBar("suite coverage");
 
@@ -158,7 +158,7 @@ export class GinkgoTestExplorer {
     }
 
     private async onRunTest(testNode: GinkgoNode, mode: string) {
-        this.testTreeDataExplorer.provider.prepareToRunTest(testNode);
+        this.testNodeTreeExplorer.provider.prepareToRunTest(testNode);
 
         const editor = vscode.window.activeTextEditor;
         switch (mode) {
