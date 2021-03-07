@@ -17,12 +17,20 @@ const gteBash = "gte-bash";
 
 export class GinkgoTest {
     private cwd: string;
+    private testEnvVars: {};
+    private testEnvFile: string;
+    private executeCommandsOn: ExecuteCommandsOn;
 
-    constructor(private context: vscode.ExtensionContext, private ginkgoPath: string, private commands: Commands, private testEnvVars: {}, private testEnvFile: string, private executeCommandsOn: ExecuteCommandsOn, private workspaceFolder?: vscode.WorkspaceFolder) {
+    constructor(private context: vscode.ExtensionContext, private ginkgoPath: string, private commands: Commands, private workspaceFolder?: vscode.WorkspaceFolder) {
         this.cwd = '';
         if (workspaceFolder) {
             this.cwd = workspaceFolder.uri.fsPath;
         }
+
+        this.testEnvVars = getConfiguration().get('testEnvVars', constants.defaultTestEnvVars);
+        this.testEnvFile = getConfiguration().get('testEnvFile', constants.defaultTestEnvFile);
+        this.executeCommandsOn = getConfiguration().get('executeCommandsOn', constants.defaultExecuteCommandsOn);
+
         this.context.subscriptions.push(vscode.workspace.onDidChangeConfiguration(evt => {
             if (affectsConfiguration(evt, 'ginkgoPath')) {
                 this.setGinkgoPath(getConfiguration().get('ginkgoPath', constants.defaultGinkgoPath));
