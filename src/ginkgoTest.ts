@@ -23,7 +23,7 @@ export class GinkgoTest {
         if (workspaceFolder) {
             this.cwd = workspaceFolder.uri.fsPath;
         }
-        context.subscriptions.push(vscode.workspace.onDidChangeConfiguration(evt => {
+        this.context.subscriptions.push(vscode.workspace.onDidChangeConfiguration(evt => {
             if (affectsConfiguration(evt, 'ginkgoPath')) {
                 this.setGinkgoPath(getConfiguration().get('ginkgoPath', constants.defaultGinkgoPath));
             }
