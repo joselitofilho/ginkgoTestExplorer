@@ -7,7 +7,7 @@ import { GinkgoTestFilesExplorer } from './ginkgoTestFilesTreeDataProvider';
 import { GinkgoOutline, GinkgoOutliner } from './ginkgoOutliner';
 import { CachingOutliner } from './cachingOutliner';
 import { Commands } from './commands';
-import { constants, GO_MODE } from './constants';
+import { constants } from './constants';
 import { GinkgoRunTestCodeLensProvider } from './ginkgoRunTestCodelensProvider';
 import { GinkgoNode } from './ginkgoNode';
 import { GinkgoTest } from './ginkgoTest';
@@ -27,7 +27,6 @@ export class GinkgoTestExplorer {
 
     private cachingOutliner: CachingOutliner;
     private testTreeDataExplorer: GinkgoTestTreeDataExplorer;
-    private ginkgoTestCodeLensProvider: GinkgoRunTestCodeLensProvider;
     private outliner: GinkgoOutliner;
     private statusBar: StatusBar;
     private ginkgoPath: string;
@@ -74,19 +73,12 @@ export class GinkgoTestExplorer {
         this.testTreeDataExplorer = new GinkgoTestTreeDataExplorer(context, this.commands, fnOutlineFromDoc);
         new GinkgoTestFilesExplorer(context);
 
-        this.ginkgoTestCodeLensProvider = new GinkgoRunTestCodeLensProvider(fnOutlineFromDoc);
-        context.subscriptions.push(vscode.languages.registerCodeLensProvider(GO_MODE, this.ginkgoTestCodeLensProvider));
-        context.subscriptions.push(vscode.workspace.onDidChangeConfiguration(evt => {
-            if (affectsConfiguration(evt, 'enableCodeLens')) {
-                this.ginkgoTestCodeLensProvider.setEnabled(getConfiguration().get('enableCodeLens', constants.defaultEnableCodeLens));
-            }
-        }));
-        context.subscriptions.push(vscode.commands.registerCommand("ginkgotestexplorer.runTest.codelens", (args) => {
+        const fnRunTest: { (args: { testNode: GinkgoNode, mode: string }): void } = (args) => {
             if (args && args.testNode && args.mode) {
-                this.testTreeDataExplorer.onRunTest(this.ginkgoTest, args.testNode, args.mode);
+                this.onRunTest(args.testNode, args.mode);
             }
-        }));
-        this.ginkgoTestCodeLensProvider.setEnabled(getConfiguration().get('enableCodeLens', constants.defaultEnableCodeLens));
+        };
+        new GinkgoRunTestCodeLensProvider(context, fnOutlineFromDoc, fnRunTest);
 
         this.statusBar = new StatusBar(context, 'ginkgotestexplorer.commandsStatusBar', 'ginkgotestexplorer.runningCommandStatusBar', 'ginkgotestexplorer.runAllProjectTests', 'ginkgotestexplorer.generateProjectCoverage');
         context.subscriptions.push(vscode.commands.registerCommand('ginkgotestexplorer.commandsStatusBar', () => {
@@ -129,7 +121,7 @@ export class GinkgoTestExplorer {
             }
             if (rootNode) {
                 this.testTreeDataExplorer.provider.prepareToRunTest(rootNode);
-                await this.testTreeDataExplorer.onRunTestTree(this.ginkgoTest, rootNode);
+                await this.onRunTest(rootNode, 'run');
                 resolve(true);
             } else {
                 outputChannel.appendLine('Did not run test: no active text editor.');
@@ -185,6 +177,20 @@ export class GinkgoTestExplorer {
                 resolve(false);
             }
         });
+    }
+
+    private async onRunTest(testNode: GinkgoNode, mode: string) {
+        this.testTreeDataExplorer.provider.prepareToRunTest(testNode);
+
+        const editor = vscode.window.activeTextEditor;
+        switch (mode) {
+            case 'run':
+                await this.ginkgoTest.runTest(testNode.key, editor?.document);
+                break;
+            case 'debug':
+                await this.ginkgoTest.debugTest(testNode.key, editor?.document);
+                break;
+        }
     }
 
     private async onGenerateProjectCoverage() {
