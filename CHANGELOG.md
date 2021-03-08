@@ -2,9 +2,21 @@
 
 All notable changes to the "ginkgotestexplorer" extension will be documented in this file.
 
+### v0.0.13
+
+- Fixes running commands on Window.
+
+### v0.0.12 (not working - reverted)
+
+- Test file tree view.
+- Adds a search button on test view.
+- Creates a view to helping beginners.
+- Fixes running commands on Window.
+- Minor fixes.
+
 ### v0.0.11
 
-- Fix freeze screen when running commands.
+- Fixes freeze screen when running commands.
 
 ### v0.0.10
 
@@ -15,27 +27,27 @@ All notable changes to the "ginkgotestexplorer" extension will be documented in 
 
 ### v0.0.9
 
-- Add the generate project coverage command.
+- Adds the generate project coverage command.
 
 ### v0.0.8
 
-- Fix running and debugging package path.
+- Fixes running and debugging package path.
 
 ### v0.0.7
 
-- Fix running when there are BeforeSuite, BeforeEach, AfterSuite and AfterEach nodes.
+- Fixes running when there are BeforeSuite, BeforeEach, AfterSuite and AfterEach nodes.
 
 ### v0.0.6
 
-- Add the `debug test` code lens.
+- Adds the `debug test` code lens.
 
 ### v0.0.5
 
-- Add the `run test` code lens.
+- Adds the `run test` code lens.
 
 ### v0.0.4
 
-- Generate coverage.
+- Generates coverage.
 
 ### v0.0.3
 
@@ -44,11 +56,11 @@ All notable changes to the "ginkgotestexplorer" extension will be documented in 
 
 ### v0.0.2
 
-- Run Specific test
-- Show test log
+- Run Specific test.
+- Show test log.
 
 ### v0.0.1
 
-- Go To Symbol Menu
-- Run Tests
-- Test View
+- Go To Symbol Menu.
+- Run Tests.
+- Test View.
