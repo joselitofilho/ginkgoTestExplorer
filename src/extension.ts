@@ -1,5 +1,4 @@
 'use strict';
-
 import * as vscode from 'vscode';
 import { GinkgoTestExplorer } from './ginkgoTestExplorer';
 
