@@ -69,13 +69,13 @@ export class GinkgoTest {
         let testResults: TestResult[] = [];
         if (this.executeCommandsOn === 'onTerminal') {
             let activeTerminal = vscode.window.terminals.find(t => t.name === "gte-bash");
-            if (!activeTerminal) {
-                activeTerminal = vscode.window.createTerminal({ name: "gte-bash", cwd });
+            if (activeTerminal) {
+                activeTerminal.dispose();
             }
+            activeTerminal = vscode.window.createTerminal({ name: "gte-bash", cwd });
             if (activeTerminal) {
                 activeTerminal.show(true);
-                activeTerminal.sendText('', true);
-                activeTerminal.sendText(`cd ${cwd} && ${command}`, true);
+                activeTerminal.sendText(`${command}`, true);
 
                 const xml = await this.waitForReportFile(reportFile);
                 testResults = await this.parseTestResults(xml);
