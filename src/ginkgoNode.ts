@@ -1,5 +1,3 @@
-'use strict';
-
 import { TestResult } from "./testResult";
 
 export interface GinkgoNode {
