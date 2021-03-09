@@ -3,14 +3,28 @@
 import * as vscode from 'vscode';
 import { GinkgoOutline } from './ginkgoOutliner';
 import { CodeLens, Command, TextDocument } from 'vscode';
-import { isRunnableTest } from './ginkgoNode';
+import { GinkgoNode, isRunnableTest } from './ginkgoNode';
 import { rangeFromNode } from './util/editor';
+import { affectsConfiguration, getConfiguration } from './ginkgoTestExplorer';
+import { constants, GO_MODE } from './constants';
 
 export class GinkgoRunTestCodeLensProvider implements vscode.CodeLensProvider {
     protected enabled: boolean = true;
     private onDidChangeCodeLensesEmitter = new vscode.EventEmitter<void>();
 
-    constructor(private readonly outlineFromDoc: { (doc: vscode.TextDocument): Promise<GinkgoOutline> }) { }
+    constructor(private context: vscode.ExtensionContext, private readonly outlineFromDoc: { (doc: vscode.TextDocument): Promise<GinkgoOutline> }, private readonly onRunTest: { (testNode: GinkgoNode, mode: string): Promise<void> }) {
+        this.context.subscriptions.push(vscode.languages.registerCodeLensProvider(GO_MODE, this));
+        this.context.subscriptions.push(vscode.workspace.onDidChangeConfiguration(evt => {
+            if (affectsConfiguration(evt, 'enableCodeLens')) {
+                this.setEnabled(getConfiguration().get('enableCodeLens', constants.defaultEnableCodeLens));
+            }
+        }));
+        this.context.subscriptions.push(vscode.commands.registerCommand("ginkgotestexplorer.runTest.codelens", (args) => {
+            if (args && args.testNode && args.mode) {
+                this.onRunTest(args.testNode, args.mode);
+            }
+        }));
+    }
 
     public get onDidChangeCodeLenses(): vscode.Event<void> {
         return this.onDidChangeCodeLensesEmitter.event;

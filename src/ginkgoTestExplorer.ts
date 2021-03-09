@@ -59,18 +59,7 @@ export class GinkgoTestExplorer {
 
         this.testTreeDataExplorer = new GinkgoTestTreeDataExplorer(context, this.commands, this.fnOutlineFromDoc, this.onRunTestTree.bind(this));
 
-        this.testCodeLensProvider = new GinkgoRunTestCodeLensProvider(this.fnOutlineFromDoc);
-        context.subscriptions.push(vscode.languages.registerCodeLensProvider(GO_MODE, this.testCodeLensProvider));
-        context.subscriptions.push(vscode.workspace.onDidChangeConfiguration(evt => {
-            if (affectsConfiguration(evt, 'enableCodeLens')) {
-                this.testCodeLensProvider.setEnabled(getConfiguration().get('enableCodeLens', constants.defaultEnableCodeLens));
-            }
-        }));
-        context.subscriptions.push(vscode.commands.registerCommand("ginkgotestexplorer.runTest.codelens", (args) => {
-            if (args && args.testNode && args.mode) {
-                this.onRunTest(args.testNode, args.mode);
-            }
-        }));
+        this.testCodeLensProvider = new GinkgoRunTestCodeLensProvider(context, this.fnOutlineFromDoc, this.onRunTest.bind(this));
         this.testCodeLensProvider.setEnabled(getConfiguration().get('enableCodeLens', constants.defaultEnableCodeLens));
 
         context.subscriptions.push(vscode.commands.registerCommand('ginkgotestexplorer.generateProjectCoverage', this.onGenerateProjectCoverage.bind(this)));
