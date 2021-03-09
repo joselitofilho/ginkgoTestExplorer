@@ -19,7 +19,6 @@ export function affectsConfiguration(evt: vscode.ConfigurationChangeEvent, name:
 }
 
 export let outputChannel: vscode.OutputChannel;
-let ginkgoPath: string;
 
 export class GinkgoTestExplorer {
 
@@ -28,6 +27,7 @@ export class GinkgoTestExplorer {
     private ginkgoTestCodeLensProvider: GinkgoRunTestCodeLensProvider;
     private outliner: GinkgoOutliner;
     private statusBar: StatusBar;
+    private ginkgoPath: string;
     private ginkgoTest: GinkgoTest;
     private fnOutlineFromDoc: { (doc: vscode.TextDocument): Promise<GinkgoOutline> };
 
@@ -39,10 +39,10 @@ export class GinkgoTestExplorer {
         context.subscriptions.push(outputChannel);
         outputChannel.appendLine('Welcome to Ginkgo Explorer');
 
-        ginkgoPath = getConfiguration().get('ginkgoPath', constants.defaultGinkgoPath);
+        this.ginkgoPath = getConfiguration().get('ginkgoPath', constants.defaultGinkgoPath);
         context.subscriptions.push(vscode.workspace.onDidChangeConfiguration(evt => {
             if (affectsConfiguration(evt, 'ginkgoPath')) {
-                ginkgoPath = getConfiguration().get('ginkgoPath', constants.defaultGinkgoPath);
+                this.ginkgoPath = getConfiguration().get('ginkgoPath', constants.defaultGinkgoPath);
             }
         }));
 
@@ -50,23 +50,9 @@ export class GinkgoTestExplorer {
         if (vscode.workspace.workspaceFolders) {
             workspaceFolder = vscode.workspace.workspaceFolders[0];
         }
-        this.ginkgoTest = new GinkgoTest(ginkgoPath, this.commands, getConfiguration().get('testEnvVars', constants.defaultTestEnvVars), getConfiguration().get('testEnvFile', constants.defaultTestEnvFile), getConfiguration().get('executeCommandsOn', constants.defaultExecuteCommandsOn), workspaceFolder);
-        context.subscriptions.push(vscode.workspace.onDidChangeConfiguration(evt => {
-            if (affectsConfiguration(evt, 'ginkgoPath')) {
-                this.ginkgoTest.setGinkgoPath(getConfiguration().get('ginkgoPath', constants.defaultGinkgoPath));
-            }
-            if (affectsConfiguration(evt, 'testEnvVars')) {
-                this.ginkgoTest.setTestEnvVars(getConfiguration().get('testEnvVars', constants.defaultTestEnvVars));
-            }
-            if (affectsConfiguration(evt, 'testEnvFile')) {
-                this.ginkgoTest.setTestEnvFile(getConfiguration().get('testEnvFile', constants.defaultTestEnvFile));
-            }
-            if (affectsConfiguration(evt, 'executeCommandsOn')) {
-                this.ginkgoTest.setExecuteCommandsOn(getConfiguration().get('executeCommandsOn', constants.defaultExecuteCommandsOn));
-            }
-        }));
+        this.ginkgoTest = new GinkgoTest(context, this.ginkgoPath, this.commands, workspaceFolder);
 
-        this.outliner = new GinkgoOutliner(ginkgoPath, this.commands);
+        this.outliner = new GinkgoOutliner(this.ginkgoPath, this.commands);
         this.cachingOutliner = new CachingOutliner(this.outliner, getConfiguration().get('cacheTTL', constants.defaultCacheTTL));
         context.subscriptions.push({ dispose: () => { this.cachingOutliner.clear(); } });
         context.subscriptions.push(vscode.workspace.onDidChangeConfiguration(evt => {
