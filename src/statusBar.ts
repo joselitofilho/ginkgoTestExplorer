@@ -1,3 +1,5 @@
+'use strict';
+
 import * as vscode from 'vscode';
 import { outputChannel } from './ginkgoTestExplorer';
 
@@ -9,16 +11,23 @@ export class StatusBar {
     private commandsStatusBarItem: vscode.StatusBarItem;
     private runningCommandStatusBarItem: vscode.StatusBarItem;
 
-    constructor(private readonly context: vscode.ExtensionContext, private readonly clickCommandsStatusBarCommand: string, private readonly clickRunningStatusBarCommand: string, private readonly runAllProjectTestCommand: string, private readonly generateProjectCoverageCommand: string) {
+    constructor(private readonly context: vscode.ExtensionContext, private readonly runAllProjectTestCommand: string, private readonly generateProjectCoverageCommand: string) {
+        this.context.subscriptions.push(vscode.commands.registerCommand('ginkgotestexplorer.commandsStatusBar', () => {
+            this.onClickCommandsStatusBarItem();
+        }));
+        this.context.subscriptions.push(vscode.commands.registerCommand('ginkgotestexplorer.runningCommandStatusBar', () => {
+            this.onClickRunningCommandStatusBarItem();
+        }));
+
         this.commandsStatusBarItem = vscode.window.createStatusBarItem(vscode.StatusBarAlignment.Left, 101);
-        this.commandsStatusBarItem.command = this.clickCommandsStatusBarCommand;
+        this.commandsStatusBarItem.command = 'ginkgotestexplorer.commandsStatusBar';
         this.context.subscriptions.push(this.commandsStatusBarItem);
         this.commandsStatusBarItem.text = runAllProjectTests;
         this.commandsStatusBarItem.tooltip = "Select and start the run project tests or coverage";
         this.commandsStatusBarItem.show();
 
         this.runningCommandStatusBarItem = vscode.window.createStatusBarItem(vscode.StatusBarAlignment.Left, 100);
-        this.runningCommandStatusBarItem.command = this.clickRunningStatusBarCommand;
+        this.runningCommandStatusBarItem.command = 'ginkgotestexplorer.runningCommandStatusBar';
         this.context.subscriptions.push(this.runningCommandStatusBarItem);
     }
 
@@ -43,7 +52,7 @@ export class StatusBar {
     }
 
     public onClickRunningCommandStatusBarItem() {
-        // vscode.window.activeTerminal?.show(true);
+        // TODO vscode.window.activeTerminal?.show(true);
         outputChannel.show(true);
     }
 
