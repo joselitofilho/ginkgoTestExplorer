@@ -5,10 +5,10 @@ import * as outliner from './ginkgoOutliner';
 import * as editorUtil from './util/editor';
 import * as decorationUtil from './util/decoration';
 import { Commands } from './commands';
-import { checkGinkgoIsInstalled, outputChannel } from './ginkgoTestExplorer';
+import { affectsConfiguration, getConfiguration, outputChannel } from './ginkgoTestExplorer';
 import { TestResult } from './testResult';
 import { GinkgoNode, isRootNode, isRunnableTest, isWrenchNode } from './ginkgoNode';
-import { GO_MODE, UpdateOn } from './constants';
+import { constants, GO_MODE, UpdateOn } from './constants';
 
 export class GinkgoTestTreeDataProvider implements vscode.TreeDataProvider<GinkgoNode> {
 
@@ -147,7 +147,7 @@ export class GinkgoTestTreeDataProvider implements vscode.TreeDataProvider<Ginkg
                 this._roots = outline.nested;
                 this.onDicoveredTest(outline.flat);
             } catch (err) {
-                checkGinkgoIsInstalled();
+                this.commands.sendCheckGinkgoIsInstalledEmitter();
                 outputChannel.appendLine(`Could not populate the outline view: ${err}`);
                 void vscode.window.showErrorMessage('Could not populate the outline view', ...['Open Log']).then(action => {
                     if (action === 'Open Log') {
@@ -266,4 +266,34 @@ function tooltipForGinkgoNode(element: GinkgoNode): vscode.MarkdownString {
 // > -- https://code.visualstudio.com/api/references/vscode-api#TextEditor
 function isMainEditor(editor: vscode.TextEditor): boolean {
     return editor.viewColumn !== undefined;
+}
+
+export class GinkgoTestTreeDataExplorer {
+    private treeDataProvider: GinkgoTestTreeDataProvider;
+
+    constructor(context: vscode.ExtensionContext, commands: Commands, outlineFromDoc: { (doc: vscode.TextDocument): Promise<outliner.GinkgoOutline> }, onRunTestTree: { (testNode: GinkgoNode): Promise<void> }) {
+        this.treeDataProvider = new GinkgoTestTreeDataProvider(context, commands, outlineFromDoc, 'ginkgotestexplorer.clickTreeItem',
+            getConfiguration().get('updateOn', constants.defaultUpdateOn),
+            getConfiguration().get('updateOnTypeDelay', constants.defaultUpdateOnTypeDelay),
+            getConfiguration().get('doubleClickThreshold', constants.defaultDoubleClickThreshold),
+        );
+        context.subscriptions.push(vscode.window.createTreeView('ginkgotestexplorer', { treeDataProvider: this.treeDataProvider, showCollapseAll: true, canSelectMany: false }));
+        context.subscriptions.push(vscode.workspace.onDidChangeConfiguration(evt => {
+            if (affectsConfiguration(evt, 'updateOn')) {
+                this.treeDataProvider.setUpdateOn(getConfiguration().get('updateOn', constants.defaultUpdateOn));
+            }
+            if (affectsConfiguration(evt, 'updateOnTypeDelay')) {
+                this.treeDataProvider.setUpdateOnTypeDelay(getConfiguration().get('updateOnTypeDelay', constants.defaultUpdateOnTypeDelay));
+            }
+            if (affectsConfiguration(evt, 'doubleClickThreshold')) {
+                this.treeDataProvider.setDoubleClickThreshold(getConfiguration().get('doubleClickThreshold', constants.defaultDoubleClickThreshold));
+            }
+        }));
+        context.subscriptions.push(vscode.commands.registerCommand("ginkgotestexplorer.runTest.tree", onRunTestTree));
+    }
+
+    get provider(): GinkgoTestTreeDataProvider {
+        return this.treeDataProvider;
+    }
+
 }
