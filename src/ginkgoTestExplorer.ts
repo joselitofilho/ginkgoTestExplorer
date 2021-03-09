@@ -126,6 +126,7 @@ export class GinkgoTestExplorer {
         context.subscriptions.push(vscode.commands.registerCommand("ginkgotestexplorer.runSuiteTest", this.onRunSuiteTest.bind(this)));
         context.subscriptions.push(vscode.commands.registerCommand("ginkgotestexplorer.runAllProjectTests", this.onRunAllProjectTests.bind(this)));
         context.subscriptions.push(vscode.commands.registerCommand("ginkgotestexplorer.showTestoutput", this.onShowTestOutput.bind(this)));
+        context.subscriptions.push(vscode.commands.registerCommand("ginkgotestexplorer.installDependencies", this.onInstallDependencies.bind(this)));
     }
 
     private async onShowTestOutput(testNode: GinkgoNode) {
@@ -267,10 +268,18 @@ export class GinkgoTestExplorer {
         }
     }
 
+    private async onInstallDependencies() {
+        this.statusBar.showRunningCommandBar("ginkgo help");
+        outputChannel.clear();
+        outputChannel.show();
+        await checkGinkgoIsInstalled();
+        this.statusBar.hideRunningCommandBar();
+    }
+
 }
 
 export async function checkGinkgoIsInstalled() {
-    const isInstalled = await ginkgoTest.checkGinkgoIsInstalled(ginkgoPath);
+    const isInstalled = await ginkgoTest.checkGinkgoIsInstalled();
     if (!isInstalled) {
         outputChannel.appendLine(`Ginkgo was not found.`);
         const action = await vscode.window.showInformationMessage('The Ginkgo executable was not found.', ...['Install']);

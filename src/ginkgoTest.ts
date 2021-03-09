@@ -140,8 +140,8 @@ export class GinkgoTest {
         return fs.readFileSync(`${coverageDir}/${coverageHTML}`, { encoding: 'utf8' });
     }
 
-    public async checkGinkgoIsInstalled(ginkgoPath: string): Promise<boolean> {
-        return await this.execCommand(`${ginkgoPath} help`, this.cwd, false);
+    public async checkGinkgoIsInstalled(): Promise<boolean> {
+        return await this.execCommand(`${this.ginkgoPath} help`, this.cwd, false);
     }
 
     public async callGinkgoInstall(): Promise<boolean> {
@@ -216,9 +216,14 @@ export class GinkgoTest {
             try {
                 const commandSplit: string[] = command.split(" ");
                 const tp = cp.spawn(commandSplit[0], commandSplit.slice(1), { shell: true, cwd });
-                tp.stdout.on('data', (chunk) => outputChannel.appendLine(chunk.toString()));
+                if (showOutput) {
+                    tp.stdout.on('data', (chunk) => outputChannel.appendLine(chunk.toString()));
+                }
                 tp.on('close', code => resolve(code === 0));
             } catch (err) {
+                if (showOutput) {
+                    outputChannel.appendLine(err);
+                }
                 reject(err);
             }
         });
