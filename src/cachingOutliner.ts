@@ -1,8 +1,9 @@
 'use strict';
 
 import * as vscode from 'vscode';
+import { constants } from './constants';
 import * as outliner from './ginkgoOutliner';
-import { outputChannel } from './ginkgoTestExplorer';
+import { affectsConfiguration, getConfiguration, outputChannel } from './ginkgoTestExplorer';
 
 interface CacheValue {
     docVersion: number,
@@ -12,9 +13,23 @@ interface CacheValue {
 
 export class CachingOutliner {
 
+    private cacheTTL: number;
     private docToOutlineMap: Map<string, CacheValue> = new Map();
 
-    constructor(private outliner: outliner.GinkgoOutliner, private cacheTTL: number) { };
+    constructor(private context: vscode.ExtensionContext, private outliner: outliner.GinkgoOutliner) {
+        this.cacheTTL = getConfiguration().get('cacheTTL', constants.defaultCacheTTL);
+        
+        this.context.subscriptions.push({ dispose: () => { this.clear(); } });
+        this.context.subscriptions.push(vscode.workspace.onDidChangeConfiguration(evt => {
+            if (affectsConfiguration(evt, 'ginkgoPath')) {
+                this.outliner.setGinkgoPath(getConfiguration().get('ginkgoPath', constants.defaultGinkgoPath));
+                this.setOutliner(this.outliner);
+            }
+            if (affectsConfiguration(evt, 'cacheTTL')) {
+                this.setCacheTTL(getConfiguration().get('cacheTTL', constants.defaultCacheTTL));
+            }
+        }));
+    }
 
     public setOutliner(outliner: outliner.GinkgoOutliner) {
         this.outliner = outliner;

@@ -22,17 +22,16 @@ export let outputChannel: vscode.OutputChannel;
 
 export class GinkgoTestExplorer {
 
+    private readonly commands: Commands;
     private cachingOutliner: CachingOutliner;
-    private testTreeDataExplorer: GinkgoTestTreeDataExplorer;
-    private ginkgoTestCodeLensProvider: GinkgoRunTestCodeLensProvider;
     private outliner: GinkgoOutliner;
-    private statusBar: StatusBar;
     private ginkgoPath: string;
     private ginkgoTest: GinkgoTest;
+    private statusBar: StatusBar;
+    private testCodeLensProvider: GinkgoRunTestCodeLensProvider;
+    private testTreeDataExplorer: GinkgoTestTreeDataExplorer;
     private fnOutlineFromDoc: { (doc: vscode.TextDocument): Promise<GinkgoOutline> };
 
-
-    readonly commands: Commands;
     constructor(context: vscode.ExtensionContext) {
         this.commands = new Commands();
         outputChannel = vscode.window.createOutputChannel(constants.displayName);
@@ -46,6 +45,8 @@ export class GinkgoTestExplorer {
             }
         }));
 
+        this.statusBar = new StatusBar(context, 'ginkgotestexplorer.runAllProjectTests', 'ginkgotestexplorer.generateProjectCoverage');
+
         let workspaceFolder: vscode.WorkspaceFolder | undefined;
         if (vscode.workspace.workspaceFolders) {
             workspaceFolder = vscode.workspace.workspaceFolders[0];
@@ -53,29 +54,16 @@ export class GinkgoTestExplorer {
         this.ginkgoTest = new GinkgoTest(context, this.ginkgoPath, this.commands, workspaceFolder);
 
         this.outliner = new GinkgoOutliner(this.ginkgoPath, this.commands);
-        this.cachingOutliner = new CachingOutliner(this.outliner, getConfiguration().get('cacheTTL', constants.defaultCacheTTL));
-        context.subscriptions.push({ dispose: () => { this.cachingOutliner.clear(); } });
-        context.subscriptions.push(vscode.workspace.onDidChangeConfiguration(evt => {
-            if (affectsConfiguration(evt, 'ginkgoPath')) {
-                this.outliner.setGinkgoPath(getConfiguration().get('ginkgoPath', constants.defaultGinkgoPath));
-                this.cachingOutliner.setOutliner(this.outliner);
-            }
-            if (affectsConfiguration(evt, 'cacheTTL')) {
-                this.cachingOutliner.setCacheTTL(getConfiguration().get('cacheTTL', constants.defaultCacheTTL));
-            }
-        }));
-
-        context.subscriptions.push(this.commands.checkGinkgoIsInstalledEmitter(this.onCheckGinkgoIsInstalledEmitter.bind(this), this));
-
+        this.cachingOutliner = new CachingOutliner(context, this.outliner);
         this.fnOutlineFromDoc = doc => this.cachingOutliner.fromDocument(doc);
 
         this.testTreeDataExplorer = new GinkgoTestTreeDataExplorer(context, this.commands, this.fnOutlineFromDoc, this.onRunTestTree.bind(this));
 
-        this.ginkgoTestCodeLensProvider = new GinkgoRunTestCodeLensProvider(this.fnOutlineFromDoc);
-        context.subscriptions.push(vscode.languages.registerCodeLensProvider(GO_MODE, this.ginkgoTestCodeLensProvider));
+        this.testCodeLensProvider = new GinkgoRunTestCodeLensProvider(this.fnOutlineFromDoc);
+        context.subscriptions.push(vscode.languages.registerCodeLensProvider(GO_MODE, this.testCodeLensProvider));
         context.subscriptions.push(vscode.workspace.onDidChangeConfiguration(evt => {
             if (affectsConfiguration(evt, 'enableCodeLens')) {
-                this.ginkgoTestCodeLensProvider.setEnabled(getConfiguration().get('enableCodeLens', constants.defaultEnableCodeLens));
+                this.testCodeLensProvider.setEnabled(getConfiguration().get('enableCodeLens', constants.defaultEnableCodeLens));
             }
         }));
         context.subscriptions.push(vscode.commands.registerCommand("ginkgotestexplorer.runTest.codelens", (args) => {
@@ -83,9 +71,7 @@ export class GinkgoTestExplorer {
                 this.onRunTest(args.testNode, args.mode);
             }
         }));
-        this.ginkgoTestCodeLensProvider.setEnabled(getConfiguration().get('enableCodeLens', constants.defaultEnableCodeLens));
-
-        this.statusBar = new StatusBar(context, 'ginkgotestexplorer.runAllProjectTests', 'ginkgotestexplorer.generateProjectCoverage');
+        this.testCodeLensProvider.setEnabled(getConfiguration().get('enableCodeLens', constants.defaultEnableCodeLens));
 
         context.subscriptions.push(vscode.commands.registerCommand('ginkgotestexplorer.generateProjectCoverage', this.onGenerateProjectCoverage.bind(this)));
         context.subscriptions.push(vscode.commands.registerCommand('ginkgotestexplorer.generateSuiteCoverage', this.onGenerateSuiteCoverage.bind(this)));
@@ -94,10 +80,6 @@ export class GinkgoTestExplorer {
         context.subscriptions.push(vscode.commands.registerCommand("ginkgotestexplorer.runAllProjectTests", this.onRunAllProjectTests.bind(this)));
         context.subscriptions.push(vscode.commands.registerCommand("ginkgotestexplorer.showTestoutput", this.onShowTestOutput.bind(this)));
         context.subscriptions.push(vscode.commands.registerCommand("ginkgotestexplorer.installDependencies", this.onInstallDependencies.bind(this)));
-    }
-
-    private async onCheckGinkgoIsInstalledEmitter() {
-        await this.ginkgoTest.checkGinkgoIsInstalled();
     }
 
     private async onShowTestOutput(testNode: GinkgoNode) {

@@ -21,10 +21,12 @@ export class GinkgoTest {
     private testEnvVars: {};
     private testEnvFile: string; 
 
-    constructor(private readonly context: vscode.ExtensionContext, private ginkgoPath: string, private commands: Commands, private workspaceFolder?: vscode.WorkspaceFolder) {
+    constructor(private context: vscode.ExtensionContext, private ginkgoPath: string, private commands: Commands, private workspaceFolder?: vscode.WorkspaceFolder) {
         this.executeCommandsOn = getConfiguration().get('executeCommandsOn', constants.defaultExecuteCommandsOn);
         this.testEnvVars = getConfiguration().get('testEnvVars', constants.defaultTestEnvVars);
         this.testEnvFile = getConfiguration().get('testEnvFile', constants.defaultTestEnvFile);
+
+        this.context.subscriptions.push(this.commands.checkGinkgoIsInstalledEmitter(this.checkGinkgoIsInstalled.bind(this), this));
         
         this.context.subscriptions.push(vscode.workspace.onDidChangeConfiguration(evt => {
             if (affectsConfiguration(evt, 'ginkgoPath')) {
