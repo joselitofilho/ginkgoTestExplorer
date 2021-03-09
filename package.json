@@ -61,6 +61,11 @@
           "command": "ginkgotestexplorer.generateSuiteCoverage",
           "when": "view == ginkgotestexplorer",
           "group": "navigation@1"
+        },
+        {
+          "command": "ginkgotestexplorer.gotoSymbolInEditor",
+          "when": "view == ginkgotestexplorer",
+          "group": "navigation@2"
         }
       ],
       "view/item/context": [
@@ -112,7 +117,11 @@
       },
       {
         "command": "ginkgotestexplorer.gotoSymbolInEditor",
-        "title": "Ginkgo: Go to symbol"
+        "title": "Ginkgo: Go to symbol",
+        "icon": {
+          "light": "resources/light/search.svg",
+          "dark": "resources/dark/search.svg"
+        }
       },
       {
         "command": "ginkgotestexplorer.installDependencies",
