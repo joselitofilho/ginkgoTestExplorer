@@ -170,7 +170,34 @@ export class GinkgoTest {
         return fs.readFileSync(`${coverageDir}/${coverageHTML}`, { encoding: 'utf8' });
     }
 
-    public async checkGinkgoIsInstalled(): Promise<boolean> {
+    public async checkGinkgoIsInstalled() {
+        const isInstalled = await this.callGinkgoHelp();
+        if (!isInstalled) {
+            outputChannel.appendLine(`Ginkgo was not found.`);
+            const action = await vscode.window.showInformationMessage('The Ginkgo executable was not found.', ...['Install']);
+            if (action === 'Install') {
+                outputChannel.show();
+                outputChannel.appendLine('Installing Ginkgo and Gomega.');
+                outputChannel.appendLine('go get github.com/onsi/ginkgo/ginkgo');
+                outputChannel.appendLine('go get github.com/onsi/gomega/...');
+                outputChannel.appendLine('Please wait...');
+                let installed = await this.callGinkgoInstall();
+                if (installed) {
+                    outputChannel.appendLine('Ginkgo has been installed successfully.');
+                    installed = await this.callGomegaInstall();
+                    if (installed) {
+                        outputChannel.appendLine('Gomega has been installed successfully.');
+                    } else {
+                        outputChannel.appendLine('Error installing Ginkgo and Gomega.');
+                    }
+                } else {
+                    outputChannel.appendLine('Error installing Ginkgo and Gomega.');
+                }
+            }
+        }
+    }
+
+    public async callGinkgoHelp(): Promise<boolean> {
         return await this.execCommand(`${this.ginkgoPath} help`, this.cwd, false);
     }
 

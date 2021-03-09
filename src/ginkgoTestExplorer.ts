@@ -19,7 +19,6 @@ export function affectsConfiguration(evt: vscode.ConfigurationChangeEvent, name:
 }
 
 export let outputChannel: vscode.OutputChannel;
-let ginkgoTest: GinkgoTest;
 let ginkgoPath: string;
 
 export class GinkgoTestExplorer {
@@ -29,6 +28,7 @@ export class GinkgoTestExplorer {
     private ginkgoTestCodeLensProvider: GinkgoRunTestCodeLensProvider;
     private outliner: GinkgoOutliner;
     private statusBar: StatusBar;
+    private ginkgoTest: GinkgoTest;
     private fnOutlineFromDoc: { (doc: vscode.TextDocument): Promise<GinkgoOutline> };
 
 
@@ -50,19 +50,19 @@ export class GinkgoTestExplorer {
         if (vscode.workspace.workspaceFolders) {
             workspaceFolder = vscode.workspace.workspaceFolders[0];
         }
-        ginkgoTest = new GinkgoTest(ginkgoPath, this.commands, getConfiguration().get('testEnvVars', constants.defaultTestEnvVars), getConfiguration().get('testEnvFile', constants.defaultTestEnvFile), getConfiguration().get('executeCommandsOn', constants.defaultExecuteCommandsOn), workspaceFolder);
+        this.ginkgoTest = new GinkgoTest(ginkgoPath, this.commands, getConfiguration().get('testEnvVars', constants.defaultTestEnvVars), getConfiguration().get('testEnvFile', constants.defaultTestEnvFile), getConfiguration().get('executeCommandsOn', constants.defaultExecuteCommandsOn), workspaceFolder);
         context.subscriptions.push(vscode.workspace.onDidChangeConfiguration(evt => {
             if (affectsConfiguration(evt, 'ginkgoPath')) {
-                ginkgoTest.setGinkgoPath(getConfiguration().get('ginkgoPath', constants.defaultGinkgoPath));
+                this.ginkgoTest.setGinkgoPath(getConfiguration().get('ginkgoPath', constants.defaultGinkgoPath));
             }
             if (affectsConfiguration(evt, 'testEnvVars')) {
-                ginkgoTest.setTestEnvVars(getConfiguration().get('testEnvVars', constants.defaultTestEnvVars));
+                this.ginkgoTest.setTestEnvVars(getConfiguration().get('testEnvVars', constants.defaultTestEnvVars));
             }
             if (affectsConfiguration(evt, 'testEnvFile')) {
-                ginkgoTest.setTestEnvFile(getConfiguration().get('testEnvFile', constants.defaultTestEnvFile));
+                this.ginkgoTest.setTestEnvFile(getConfiguration().get('testEnvFile', constants.defaultTestEnvFile));
             }
             if (affectsConfiguration(evt, 'executeCommandsOn')) {
-                ginkgoTest.setExecuteCommandsOn(getConfiguration().get('executeCommandsOn', constants.defaultExecuteCommandsOn));
+                this.ginkgoTest.setExecuteCommandsOn(getConfiguration().get('executeCommandsOn', constants.defaultExecuteCommandsOn));
             }
         }));
 
@@ -111,7 +111,7 @@ export class GinkgoTestExplorer {
     }
 
     private async onCheckGinkgoIsInstalledEmitter() {
-        await checkGinkgoIsInstalled();
+        await this.ginkgoTest.checkGinkgoIsInstalled();
     }
 
     private async onShowTestOutput(testNode: GinkgoNode) {
@@ -135,10 +135,10 @@ export class GinkgoTestExplorer {
         const editor = vscode.window.activeTextEditor;
         switch (mode) {
             case 'run':
-                await ginkgoTest.runTest(testNode.key, editor?.document);
+                await this.ginkgoTest.runTest(testNode.key, editor?.document);
                 break;
             case 'debug':
-                await ginkgoTest.debugTest(testNode.key, editor?.document);
+                await this.ginkgoTest.debugTest(testNode.key, editor?.document);
                 break;
         }
     }
@@ -168,7 +168,7 @@ export class GinkgoTestExplorer {
             outputChannel.clear();
             outputChannel.appendLine('Running all project tests...');
             try {
-                await ginkgoTest.runGoTest();
+                await this.ginkgoTest.runGoTest();
             } catch (err) {
                 outputChannel.appendLine(`Error while running all project tests: ${err}.`);
                 reject(err);
@@ -193,7 +193,7 @@ export class GinkgoTestExplorer {
 
                 outputChannel.appendLine('Generating suite coverage results...');
                 try {
-                    const output = await ginkgoTest.generateCoverage(document);
+                    const output = await this.ginkgoTest.generateCoverage(document);
                     const viewPanel = vscode.window.createWebviewPanel('Coverage', `Coverage results: ${rootNode.text}`, { viewColumn: vscode.ViewColumn.Two, preserveFocus: true }, { enableScripts: true });
                     viewPanel.webview.html = output;
                     outputChannel.appendLine('Suite coverage has been generated.');
@@ -220,9 +220,9 @@ export class GinkgoTestExplorer {
 
             outputChannel.appendLine('Generating project coverage results...');
             try {
-                await ginkgoTest.runGoTestOnOutputChannel();
+                await this.ginkgoTest.runGoTestOnOutputChannel();
 
-                const output = await ginkgoTest.generateCoverage();
+                const output = await this.ginkgoTest.generateCoverage();
                 const viewPanel = vscode.window.createWebviewPanel('Coverage', 'Project coverage result', { viewColumn: vscode.ViewColumn.Two, preserveFocus: true }, { enableScripts: true });
                 viewPanel.webview.html = output;
                 outputChannel.appendLine('Project coverage has been generated.');
@@ -255,35 +255,8 @@ export class GinkgoTestExplorer {
         this.statusBar.showRunningCommandBar("ginkgo help");
         outputChannel.clear();
         outputChannel.show();
-        await checkGinkgoIsInstalled();
+        await this.ginkgoTest.checkGinkgoIsInstalled();
         this.statusBar.hideRunningCommandBar();
     }
 
-}
-
-export async function checkGinkgoIsInstalled() {
-    const isInstalled = await ginkgoTest.checkGinkgoIsInstalled();
-    if (!isInstalled) {
-        outputChannel.appendLine(`Ginkgo was not found.`);
-        const action = await vscode.window.showInformationMessage('The Ginkgo executable was not found.', ...['Install']);
-        if (action === 'Install') {
-            outputChannel.show();
-            outputChannel.appendLine('Installing Ginkgo and Gomega.');
-            outputChannel.appendLine('go get github.com/onsi/ginkgo/ginkgo');
-            outputChannel.appendLine('go get github.com/onsi/gomega/...');
-            outputChannel.appendLine('Please wait...');
-            let installed = await ginkgoTest.callGinkgoInstall();
-            if (installed) {
-                outputChannel.appendLine('Ginkgo has been installed successfully.');
-                installed = await ginkgoTest.callGomegaInstall();
-                if (installed) {
-                    outputChannel.appendLine('Gomega has been installed successfully.');
-                } else {
-                    outputChannel.appendLine('Error installing Ginkgo and Gomega.');
-                }
-            } else {
-                outputChannel.appendLine('Error installing Ginkgo and Gomega.');
-            }
-        }
-    }
 }
