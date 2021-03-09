@@ -71,10 +71,15 @@
       "view/item/context": [
         {
           "command": "ginkgotestexplorer.runTest.tree",
-          "when": "viewItem == test"
+          "when": "view == ginkgotestexplorer && viewItem == test"
         },
         {
-          "command": "ginkgotestexplorer.showTestoutput"
+          "command": "ginkgotestexplorer.debugTest.tree",
+          "when": "view == ginkgotestexplorer && viewItem == test"
+        },
+        {
+          "command": "ginkgotestexplorer.showTestoutput",
+          "when": "view == ginkgotestexplorer"
         }
       ]
     },
@@ -82,6 +87,10 @@
       {
         "command": "ginkgotestexplorer.runTest.tree",
         "title": "run test"
+      },
+      {
+        "command": "ginkgotestexplorer.debugTest.tree",
+        "title": "debug test"
       },
       {
         "command": "ginkgotestexplorer.runTest.codelens",

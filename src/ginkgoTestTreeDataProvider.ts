@@ -271,7 +271,7 @@ function isMainEditor(editor: vscode.TextEditor): boolean {
 export class GinkgoTestTreeDataExplorer {
     private treeDataProvider: GinkgoTestTreeDataProvider;
 
-    constructor(context: vscode.ExtensionContext, commands: Commands, outlineFromDoc: { (doc: vscode.TextDocument): Promise<outliner.GinkgoOutline> }, onRunTestTree: { (testNode: GinkgoNode): Promise<void> }) {
+    constructor(context: vscode.ExtensionContext, commands: Commands, outlineFromDoc: { (doc: vscode.TextDocument): Promise<outliner.GinkgoOutline> }, onRunTestTree: { (testNode: GinkgoNode): Promise<void> }, onDebugTestTree: { (testNode: GinkgoNode): Promise<void> }) {
         this.treeDataProvider = new GinkgoTestTreeDataProvider(context, commands, outlineFromDoc, 'ginkgotestexplorer.clickTreeItem',
             getConfiguration().get('updateOn', constants.defaultUpdateOn),
             getConfiguration().get('updateOnTypeDelay', constants.defaultUpdateOnTypeDelay),
@@ -290,6 +290,7 @@ export class GinkgoTestTreeDataExplorer {
             }
         }));
         context.subscriptions.push(vscode.commands.registerCommand("ginkgotestexplorer.runTest.tree", onRunTestTree));
+        context.subscriptions.push(vscode.commands.registerCommand("ginkgotestexplorer.debugTest.tree", onDebugTestTree));
     }
 
     get provider(): GinkgoTestTreeDataProvider {
