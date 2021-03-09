@@ -1,10 +1,11 @@
 import * as vscode from 'vscode';
 import * as symbolPicker from './symbolPicker';
-import { GinkgoTestTreeDataExplorer, GinkgoTestTreeDataProvider } from './ginkgoTestTreeDataProvider';
+import { GinkgoTestFilesExplorer } from './ginkgoTestFilesTreeDataProvider';
+import { GinkgoTestTreeDataExplorer } from './ginkgoTestTreeDataProvider';
 import { GinkgoOutline, GinkgoOutliner } from './ginkgoOutliner';
 import { CachingOutliner } from './cachingOutliner';
 import { Commands } from './commands';
-import { constants, GO_MODE } from './constants';
+import { constants } from './constants';
 import { GinkgoRunTestCodeLensProvider } from './ginkgoRunTestCodelensProvider';
 import { GinkgoNode } from './ginkgoNode';
 import { GinkgoTest } from './ginkgoTest';
@@ -58,6 +59,7 @@ export class GinkgoTestExplorer {
         this.fnOutlineFromDoc = doc => this.cachingOutliner.fromDocument(doc);
 
         this.testTreeDataExplorer = new GinkgoTestTreeDataExplorer(context, this.commands, this.fnOutlineFromDoc, this.onRunTestTree.bind(this), this.onDebugTestTree.bind(this));
+        new GinkgoTestFilesExplorer(context);
 
         this.testCodeLensProvider = new GinkgoRunTestCodeLensProvider(context, this.fnOutlineFromDoc, this.onRunTest.bind(this));
         this.testCodeLensProvider.setEnabled(getConfiguration().get('enableCodeLens', constants.defaultEnableCodeLens));

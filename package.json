@@ -23,28 +23,37 @@
     "Other"
   ],
   "activationEvents": [
-    "onView:ginkgotestexplorer"
+    "onView:ginkgotestexplorer",
+    "onView:ginkgotestfilesexplorer"
   ],
   "main": "./out/extension.js",
   "contributes": {
     "viewsContainers": {
       "activitybar": [
         {
-          "id": "testExplorer",
+          "id": "testExplorerView",
           "title": "Test Explorer",
           "icon": "media/test.svg"
         }
       ]
     },
     "views": {
-      "testExplorer": [
+      "testExplorerView": [
+        {
+          "id": "ginkgotestfilesexplorer",
+          "name": "Test files"
+        },
         {
           "id": "ginkgotestexplorer",
-          "name": "Ginkgo"
+          "name": "Ginkgo tests"
         }
       ]
     },
     "viewsWelcome": [
+      {
+        "view": "ginkgotestfilesexplorer",
+        "contents": "You have not yet opened a folder.\n[Open Folder](command:vscode.openFolder)"
+      },
       {
         "view": "ginkgotestexplorer",
         "contents": "Welcome!\n\nSelect a ginkgo test file to see the test tree view.\n\nDo you have ginkgo executable installed? [learn more](https://onsi.github.io/ginkgo/#getting-ginkgo).\n[Install executable](command:ginkgotestexplorer.installDependencies)"
@@ -66,6 +75,11 @@
           "command": "ginkgotestexplorer.gotoSymbolInEditor",
           "when": "view == ginkgotestexplorer",
           "group": "navigation@2"
+        },
+        {
+          "command": "ginkgotestfilesexplorer.refreshTreeFiles",
+          "when": "view == ginkgotestfilesexplorer",
+          "group": "navigation@0"
         }
       ],
       "view/item/context": [
@@ -135,6 +149,18 @@
       {
         "command": "ginkgotestexplorer.installDependencies",
         "title": "Ginkgo: Install dependencies"
+      },
+      {
+        "command": "ginkgotestfilesexplorer.openFile",
+        "title": "open file"
+      },
+      {
+        "command": "ginkgotestfilesexplorer.refreshTreeFiles",
+        "title": "Ginkgo: Refresh test file tree",
+        "icon": {
+          "light": "resources/light/refresh.svg",
+          "dark": "resources/dark/refresh.svg"
+        }
       }
     ],
     "configuration": {
