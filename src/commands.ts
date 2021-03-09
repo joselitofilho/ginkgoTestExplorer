@@ -1,3 +1,5 @@
+'use strict';
+
 import { EventEmitter, Event } from "vscode";
 import { GinkgoNode } from "./ginkgoNode";
 import { TestResult } from "./testResult";
@@ -7,6 +9,7 @@ export class Commands {
     private readonly onTestDiscoveryFinishedEmitter = new EventEmitter<GinkgoNode[]>();
     private readonly onTestRunStartedEmitter = new EventEmitter<GinkgoNode>();
     private readonly onTestResultsEmitter = new EventEmitter<TestResult[]>();
+    private readonly onCheckGinkgoIsInstalledEmitter = new EventEmitter<void>();
 
     public get discoveredTest(): Event<GinkgoNode[]> {
         return this.onTestDiscoveryFinishedEmitter.event;
@@ -25,5 +28,11 @@ export class Commands {
     }
     public sendTestResults(testResults: TestResult[]) {
         this.onTestResultsEmitter.fire(testResults);
+    }
+    public get checkGinkgoIsInstalledEmitter(): Event<void> {
+        return this.onCheckGinkgoIsInstalledEmitter.event;
+    }
+    public sendCheckGinkgoIsInstalledEmitter() {
+        this.onCheckGinkgoIsInstalledEmitter.fire();
     }
 }

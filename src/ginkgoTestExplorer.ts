@@ -1,6 +1,6 @@
 import * as vscode from 'vscode';
 import * as symbolPicker from './symbolPicker';
-import { GinkgoTestTreeDataProvider } from './ginkgoTestTreeDataProvider';
+import { GinkgoTestTreeDataExplorer, GinkgoTestTreeDataProvider } from './ginkgoTestTreeDataProvider';
 import { GinkgoOutline, GinkgoOutliner } from './ginkgoOutliner';
 import { CachingOutliner } from './cachingOutliner';
 import { Commands } from './commands';
@@ -25,10 +25,12 @@ let ginkgoPath: string;
 export class GinkgoTestExplorer {
 
     private cachingOutliner: CachingOutliner;
-    private ginkgoTestTreeDataProvider: GinkgoTestTreeDataProvider;
+    private testTreeDataExplorer: GinkgoTestTreeDataExplorer;
     private ginkgoTestCodeLensProvider: GinkgoRunTestCodeLensProvider;
     private outliner: GinkgoOutliner;
     private statusBar: StatusBar;
+    private fnOutlineFromDoc: { (doc: vscode.TextDocument): Promise<GinkgoOutline> };
+
 
     readonly commands: Commands;
     constructor(context: vscode.ExtensionContext) {
@@ -77,28 +79,13 @@ export class GinkgoTestExplorer {
             }
         }));
 
-        const fnOutlineFromDoc: { (doc: vscode.TextDocument): Promise<GinkgoOutline> } = doc => this.cachingOutliner.fromDocument(doc);
+        context.subscriptions.push(this.commands.checkGinkgoIsInstalledEmitter(this.onCheckGinkgoIsInstalledEmitter.bind(this), this));
 
-        this.ginkgoTestTreeDataProvider = new GinkgoTestTreeDataProvider(context, this.commands, fnOutlineFromDoc, 'ginkgotestexplorer.clickTreeItem',
-            getConfiguration().get('updateOn', constants.defaultUpdateOn),
-            getConfiguration().get('updateOnTypeDelay', constants.defaultUpdateOnTypeDelay),
-            getConfiguration().get('doubleClickThreshold', constants.defaultDoubleClickThreshold),
-        );
-        context.subscriptions.push(vscode.window.registerTreeDataProvider('ginkgotestexplorer', this.ginkgoTestTreeDataProvider));
-        context.subscriptions.push(vscode.workspace.onDidChangeConfiguration(evt => {
-            if (affectsConfiguration(evt, 'updateOn')) {
-                this.ginkgoTestTreeDataProvider.setUpdateOn(getConfiguration().get('updateOn', constants.defaultUpdateOn));
-            }
-            if (affectsConfiguration(evt, 'updateOnTypeDelay')) {
-                this.ginkgoTestTreeDataProvider.setUpdateOnTypeDelay(getConfiguration().get('updateOnTypeDelay', constants.defaultUpdateOnTypeDelay));
-            }
-            if (affectsConfiguration(evt, 'doubleClickThreshold')) {
-                this.ginkgoTestTreeDataProvider.setDoubleClickThreshold(getConfiguration().get('doubleClickThreshold', constants.defaultDoubleClickThreshold));
-            }
-        }));
-        context.subscriptions.push(vscode.commands.registerCommand("ginkgotestexplorer.runTest.tree", this.onRunTestTree.bind(this)));
+        this.fnOutlineFromDoc = doc => this.cachingOutliner.fromDocument(doc);
 
-        this.ginkgoTestCodeLensProvider = new GinkgoRunTestCodeLensProvider(fnOutlineFromDoc);
+        this.testTreeDataExplorer = new GinkgoTestTreeDataExplorer(context, this.commands, this.fnOutlineFromDoc, this.onRunTestTree.bind(this));
+
+        this.ginkgoTestCodeLensProvider = new GinkgoRunTestCodeLensProvider(this.fnOutlineFromDoc);
         context.subscriptions.push(vscode.languages.registerCodeLensProvider(GO_MODE, this.ginkgoTestCodeLensProvider));
         context.subscriptions.push(vscode.workspace.onDidChangeConfiguration(evt => {
             if (affectsConfiguration(evt, 'enableCodeLens')) {
@@ -129,6 +116,10 @@ export class GinkgoTestExplorer {
         context.subscriptions.push(vscode.commands.registerCommand("ginkgotestexplorer.installDependencies", this.onInstallDependencies.bind(this)));
     }
 
+    private async onCheckGinkgoIsInstalledEmitter() {
+        await checkGinkgoIsInstalled();
+    }
+
     private async onShowTestOutput(testNode: GinkgoNode) {
         if (testNode.result && testNode.result.output && testNode.result.output.length > 0) {
             outputChannel.clear();
@@ -145,7 +136,7 @@ export class GinkgoTestExplorer {
     }
 
     private async onRunTest(testNode: GinkgoNode, mode: string) {
-        this.ginkgoTestTreeDataProvider.prepareToRunTest(testNode);
+        this.testTreeDataExplorer.provider.prepareToRunTest(testNode);
 
         const editor = vscode.window.activeTextEditor;
         switch (mode) {
@@ -163,10 +154,10 @@ export class GinkgoTestExplorer {
         await new Promise<boolean>(async resolve => {
             outputChannel.clear();
             if (!rootNode) {
-                rootNode = this.ginkgoTestTreeDataProvider.rootNode;
+                rootNode = this.testTreeDataExplorer.provider.rootNode;
             }
             if (rootNode) {
-                this.ginkgoTestTreeDataProvider.prepareToRunTest(rootNode);
+                this.testTreeDataExplorer.provider.prepareToRunTest(rootNode);
                 await this.onRunTestTree(rootNode);
                 resolve(true);
             } else {
@@ -199,7 +190,7 @@ export class GinkgoTestExplorer {
             outputChannel.clear();
 
             const document = vscode.window.activeTextEditor?.document;
-            const rootNode = this.ginkgoTestTreeDataProvider.rootNode;
+            const rootNode = this.testTreeDataExplorer.provider.rootNode;
             if (rootNode) {
                 this.statusBar.showRunningCommandBar("suite coverage");
 
@@ -256,7 +247,7 @@ export class GinkgoTestExplorer {
             return;
         }
         try {
-            await symbolPicker.fromTextEditor(vscode.window.activeTextEditor, doc => this.cachingOutliner.fromDocument(doc));
+            await symbolPicker.fromTextEditor(vscode.window.activeTextEditor, this.fnOutlineFromDoc);
         } catch (err) {
             outputChannel.appendLine(`Could not create the Go To Symbol menu: ${err}`);
             const action = await vscode.window.showErrorMessage('Could not create the Go To Symbol menu', ...['Open Log']);
