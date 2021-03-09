@@ -8,17 +8,38 @@ import * as junit2json from 'junit2json';
 import { Commands } from './commands';
 import { TestResult } from './testResult';
 import { constants, ExecuteCommandsOn } from './constants';
-import { outputChannel } from './ginkgoTestExplorer';
+import { affectsConfiguration, getConfiguration, outputChannel } from './ginkgoTestExplorer';
 
 const coverageHTML = "coverage.html";
 const coverageOut = "coverage.out";
 const ginkgoReport = "ginkgo.report";
-const gteBash = "gte-bash"
+const gteBash = "gte-bash";
 
 export class GinkgoTest {
     private cwd: string;
+    private executeCommandsOn: ExecuteCommandsOn;
+    private testEnvVars: {};
+    private testEnvFile: string; 
 
-    constructor(private ginkgoPath: string, private commands: Commands, private testEnvVars: {}, private testEnvFile: string, private executeCommandsOn: ExecuteCommandsOn, private workspaceFolder?: vscode.WorkspaceFolder) {
+    constructor(private readonly context: vscode.ExtensionContext, private ginkgoPath: string, private commands: Commands, private workspaceFolder?: vscode.WorkspaceFolder) {
+        this.executeCommandsOn = getConfiguration().get('executeCommandsOn', constants.defaultExecuteCommandsOn);
+        this.testEnvVars = getConfiguration().get('testEnvVars', constants.defaultTestEnvVars);
+        this.testEnvFile = getConfiguration().get('testEnvFile', constants.defaultTestEnvFile);
+        
+        this.context.subscriptions.push(vscode.workspace.onDidChangeConfiguration(evt => {
+            if (affectsConfiguration(evt, 'ginkgoPath')) {
+                this.setGinkgoPath(getConfiguration().get('ginkgoPath', constants.defaultGinkgoPath));
+            }
+            if (affectsConfiguration(evt, 'testEnvVars')) {
+                this.setTestEnvVars(getConfiguration().get('testEnvVars', constants.defaultTestEnvVars));
+            }
+            if (affectsConfiguration(evt, 'testEnvFile')) {
+                this.setTestEnvFile(getConfiguration().get('testEnvFile', constants.defaultTestEnvFile));
+            }
+            if (affectsConfiguration(evt, 'executeCommandsOn')) {
+                this.setExecuteCommandsOn(getConfiguration().get('executeCommandsOn', constants.defaultExecuteCommandsOn));
+            }
+        }));
         this.cwd = '';
         if (workspaceFolder) {
             this.cwd = workspaceFolder.uri.fsPath;
@@ -171,9 +192,10 @@ export class GinkgoTest {
     }
 
     public async checkGinkgoIsInstalled() {
+        outputChannel.appendLine('Checking the Ginkgo executable was installed.');
         const isInstalled = await this.callGinkgoHelp();
         if (!isInstalled) {
-            outputChannel.appendLine(`Ginkgo was not found.`);
+            outputChannel.appendLine('Ginkgo executable was not found.');
             const action = await vscode.window.showInformationMessage('The Ginkgo executable was not found.', ...['Install']);
             if (action === 'Install') {
                 outputChannel.show();
@@ -194,6 +216,8 @@ export class GinkgoTest {
                     outputChannel.appendLine('Error installing Ginkgo and Gomega.');
                 }
             }
+        } else {
+            outputChannel.appendLine('Ginkgo executable already installed. ;)');
         }
     }
 
