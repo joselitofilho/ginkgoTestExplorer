@@ -180,9 +180,7 @@ export class GinkgoTestExplorer {
         // TODO: run simultaneos.
         await new Promise<boolean>(async (resolve, reject) => {
             this.statusBar.showRunningCommandBar("all project tests");
-            outputChannel.show(true);
             outputChannel.clear();
-
             outputChannel.appendLine('Running all project tests...');
             try {
                 await ginkgoTest.runGoTest();
@@ -237,7 +235,7 @@ export class GinkgoTestExplorer {
 
             outputChannel.appendLine('Generating project coverage results...');
             try {
-                await ginkgoTest.runGoTest();
+                await ginkgoTest.runGoTestOnOutputChannel();
 
                 const output = await ginkgoTest.generateCoverage();
                 const viewPanel = vscode.window.createWebviewPanel('Coverage', 'Project coverage result', { viewColumn: vscode.ViewColumn.Two, preserveFocus: true }, { enableScripts: true });
