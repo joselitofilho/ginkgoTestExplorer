@@ -11,7 +11,7 @@ export class StatusBar {
     private commandsStatusBarItem: vscode.StatusBarItem;
     private runningCommandStatusBarItem: vscode.StatusBarItem;
 
-    constructor(private readonly context: vscode.ExtensionContext, private readonly runAllProjectTestCommand: string, private readonly generateProjectCoverageCommand: string) {
+    constructor(private context: vscode.ExtensionContext, private readonly runAllProjectTestCommand: string, private readonly generateProjectCoverageCommand: string) {
         this.context.subscriptions.push(vscode.commands.registerCommand('ginkgotestexplorer.commandsStatusBar', () => {
             this.onClickCommandsStatusBarItem();
         }));
