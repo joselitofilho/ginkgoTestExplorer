@@ -57,7 +57,7 @@ export class GinkgoTestExplorer {
         this.cachingOutliner = new CachingOutliner(context, this.outliner);
         this.fnOutlineFromDoc = doc => this.cachingOutliner.fromDocument(doc);
 
-        this.testTreeDataExplorer = new GinkgoTestTreeDataExplorer(context, this.commands, this.fnOutlineFromDoc, this.onRunTestTree.bind(this));
+        this.testTreeDataExplorer = new GinkgoTestTreeDataExplorer(context, this.commands, this.fnOutlineFromDoc, this.onRunTestTree.bind(this), this.onDebugTestTree.bind(this));
 
         this.testCodeLensProvider = new GinkgoRunTestCodeLensProvider(context, this.fnOutlineFromDoc, this.onRunTest.bind(this));
         this.testCodeLensProvider.setEnabled(getConfiguration().get('enableCodeLens', constants.defaultEnableCodeLens));
@@ -84,6 +84,10 @@ export class GinkgoTestExplorer {
 
     private async onRunTestTree(testNode: GinkgoNode) {
         await this.onRunTest(testNode, 'run');
+    }
+
+    private async onDebugTestTree(testNode: GinkgoNode) {
+        await this.onRunTest(testNode, 'debug');
     }
 
     private async onRunTest(testNode: GinkgoNode, mode: string) {
