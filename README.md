@@ -4,7 +4,7 @@ Welcome!
 
 This VS Code extension offers a set of tools for the [Ginkgo Framework](https://onsi.github.io/ginkgo/).
 
-![Ginkgo Test Explorer](https://github.com/joselitofilho/ginkgoTestExplorer/raw/main/media/ginkgotest.gif)
+![Ginkgo Test Explorer](media/ginkgotest.gif)
 
 It is based on two other extensions:
 - [GoTestExplorer](https://github.com/ppparihar/GoTestExplorer)
@@ -32,37 +32,37 @@ go get github.com/onsi/gomega/...
 
 ### View tests tree
 
-![View tests tree](https://github.com/joselitofilho/ginkgoTestExplorer/raw/main/media/view-tests-tree.png)
+![View tests tree](media/view-tests-tree.png)
 
 ### View test file tree
 
-![View test file tree](https://github.com/joselitofilho/ginkgoTestExplorer/raw/main/media/view-test-file-tree.png)
+![View test file tree](media/view-test-file-tree.png)
 
 ### Run/Debug individual test
 
-![Run/Debug individual test](https://github.com/joselitofilho/ginkgoTestExplorer/raw/main/media/run-debug-individual-tests.png)
+![Run/Debug individual test](media/run-debug-individual-tests.png)
 
 ### Run/Debug suite tests
 
-![Run/Debug suite tests](https://github.com/joselitofilho/ginkgoTestExplorer/raw/main/media/run-debug-suite-tests.png)
+![Run/Debug suite tests](media/run-debug-suite-tests.png)
 
-![Run suite tests](https://github.com/joselitofilho/ginkgoTestExplorer/raw/main/media/run-suite-tests.png)
+![Run suite tests](media/run-suite-tests.png)
 
 ### Generate suite coverage
 
-![Generate suite coverage](https://github.com/joselitofilho/ginkgoTestExplorer/raw/main/media/generate-suite-coverage.png)
+![Generate suite coverage](media/generate-suite-coverage.png)
 
 ### Run all project tests
 
-![Run all project tests](https://github.com/joselitofilho/ginkgoTestExplorer/raw/main/media/run-all-project-tests.png)
+![Run all project tests](media/run-all-project-tests.png)
 
 ### Generate project coverage
 
-![Generate project coverage](https://github.com/joselitofilho/ginkgoTestExplorer/raw/main/media/generate-project-coverage.png)
+![Generate project coverage](media/generate-project-coverage.png)
 
 ### Go to symbol in editor
 
-![Go to symbol in editor](https://github.com/joselitofilho/ginkgoTestExplorer/raw/main/media/go-to-symbol.png)
+![Go to symbol in editor](media/go-to-symbol.png)
 
 ### Command pallete
 
@@ -72,7 +72,7 @@ on Windows or Linux:
 on MacOS:
 - Tap <kbd>command</kbd> + <kbd>shift</kbd> + <kbd>p</kbd>
 
-![Command pallete](https://github.com/joselitofilho/ginkgoTestExplorer/raw/main/media/commands.png)
+![Command pallete](media/commands.png)
 
 ## License
 
