@@ -171,7 +171,7 @@ export class GinkgoTestFilesExplorer {
 
     constructor(private context: vscode.ExtensionContext) {
         this.treeDataProvider = new GinkgoTestFilesTreeDataProvider();
-        this.context.subscriptions.push(vscode.window.createTreeView('ginkgotestfilesexplorer', { treeDataProvider: this.treeDataProvider, showCollapseAll: true, canSelectMany: false }));
+        this.context.subscriptions.push(vscode.window.createTreeView('ginkgotestfilesexplorer', { treeDataProvider: this.treeDataProvider, showCollapseAll: false, canSelectMany: false }));
         this.context.subscriptions.push(vscode.commands.registerCommand('ginkgotestfilesexplorer.openFile', (resource) => this.openResource(resource)));
         this.context.subscriptions.push(vscode.commands.registerCommand('ginkgotestfilesexplorer.refreshTreeFiles', this.onRefreshTreeFiles.bind(this)));
     }
