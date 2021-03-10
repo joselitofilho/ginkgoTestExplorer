@@ -7,7 +7,7 @@
     "type": "git",
     "url": "https://github.com/joselitofilho/ginkgoTestExplorer"
   },
-  "version": "0.0.13",
+  "version": "0.0.14",
   "publisher": "joselitofilho",
   "engines": {
     "vscode": "^1.53.0"
@@ -23,27 +23,42 @@
     "Other"
   ],
   "activationEvents": [
-    "onView:ginkgotestexplorer"
+    "onView:ginkgotestexplorer",
+    "onView:ginkgotestfilesexplorer"
   ],
   "main": "./out/extension.js",
   "contributes": {
     "viewsContainers": {
       "activitybar": [
         {
-          "id": "testExplorer",
+          "id": "testExplorerView",
           "title": "Test Explorer",
           "icon": "media/test.svg"
         }
       ]
     },
     "views": {
-      "testExplorer": [
+      "testExplorerView": [
+        {
+          "id": "ginkgotestfilesexplorer",
+          "name": "Test files"
+        },
         {
           "id": "ginkgotestexplorer",
-          "name": "Ginkgo"
+          "name": "Ginkgo tests"
         }
       ]
     },
+    "viewsWelcome": [
+      {
+        "view": "ginkgotestfilesexplorer",
+        "contents": "You have not yet opened a folder.\n[Open Folder](command:vscode.openFolder)"
+      },
+      {
+        "view": "ginkgotestexplorer",
+        "contents": "Welcome!\n\nSelect a ginkgo test file to see the test tree view.\n\nDo you have ginkgo executable installed? [learn more](https://onsi.github.io/ginkgo/#getting-ginkgo).\n[Install executable](command:ginkgotestexplorer.installDependencies)"
+      }
+    ],
     "menus": {
       "view/title": [
         {
@@ -55,15 +70,30 @@
           "command": "ginkgotestexplorer.generateSuiteCoverage",
           "when": "view == ginkgotestexplorer",
           "group": "navigation@1"
+        },
+        {
+          "command": "ginkgotestexplorer.gotoSymbolInEditor",
+          "when": "view == ginkgotestexplorer",
+          "group": "navigation@2"
+        },
+        {
+          "command": "ginkgotestfilesexplorer.refreshTreeFiles",
+          "when": "view == ginkgotestfilesexplorer",
+          "group": "navigation@0"
         }
       ],
       "view/item/context": [
         {
           "command": "ginkgotestexplorer.runTest.tree",
-          "when": "viewItem == test"
+          "when": "view == ginkgotestexplorer && viewItem == test"
         },
         {
-          "command": "ginkgotestexplorer.showTestoutput"
+          "command": "ginkgotestexplorer.debugTest.tree",
+          "when": "view == ginkgotestexplorer && viewItem == test"
+        },
+        {
+          "command": "ginkgotestexplorer.showTestoutput",
+          "when": "view == ginkgotestexplorer"
         }
       ]
     },
@@ -71,6 +101,10 @@
       {
         "command": "ginkgotestexplorer.runTest.tree",
         "title": "run test"
+      },
+      {
+        "command": "ginkgotestexplorer.debugTest.tree",
+        "title": "debug test"
       },
       {
         "command": "ginkgotestexplorer.runTest.codelens",
@@ -106,7 +140,27 @@
       },
       {
         "command": "ginkgotestexplorer.gotoSymbolInEditor",
-        "title": "Ginkgo: Go to symbol"
+        "title": "Ginkgo: Go to symbol",
+        "icon": {
+          "light": "resources/light/search.svg",
+          "dark": "resources/dark/search.svg"
+        }
+      },
+      {
+        "command": "ginkgotestexplorer.installDependencies",
+        "title": "Ginkgo: Install dependencies"
+      },
+      {
+        "command": "ginkgotestfilesexplorer.openFile",
+        "title": "open file"
+      },
+      {
+        "command": "ginkgotestfilesexplorer.refreshTreeFiles",
+        "title": "Ginkgo: Refresh test file tree",
+        "icon": {
+          "light": "resources/light/refresh.svg",
+          "dark": "resources/dark/refresh.svg"
+        }
       }
     ],
     "configuration": {
