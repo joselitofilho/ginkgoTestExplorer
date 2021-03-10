@@ -2,6 +2,14 @@
 
 All notable changes to the "ginkgotestexplorer" extension will be documented in this file.
 
+### v0.0.14
+
+- Test file tree view.
+- Adds a search button on test view.
+- Creates a view to helping beginners.
+- Add debug action on test file tree view.
+- Minor fixes.
+
 ### v0.0.13
 
 - Fixes running commands on Window.
