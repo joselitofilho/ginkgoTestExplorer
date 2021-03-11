@@ -20,6 +20,12 @@ export class Icons {
     public static get testSuite(): string {
         return "testSuite.svg";
     }
+    public static get testSuitePassed(): string {
+        return "testSuitePassed.svg";
+    }
+    public static get testSuiteFailed(): string {
+        return "testSuiteFailed.svg";
+    }
     public static get testBy(): string {
         return "testBy.svg";
     }
