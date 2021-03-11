@@ -153,7 +153,7 @@ export class GinkgoTestFilesTreeDataProvider implements vscode.TreeDataProvider<
     }
 
     getTreeItem(element: fileSystem.FileEntry): vscode.TreeItem {
-        const treeItem = new vscode.TreeItem(element.uri, element.type === vscode.FileType.Directory ? vscode.TreeItemCollapsibleState.Expanded : vscode.TreeItemCollapsibleState.None);
+        const treeItem = new vscode.TreeItem(element.uri, element.type === vscode.FileType.Directory ? vscode.TreeItemCollapsibleState.Collapsed : vscode.TreeItemCollapsibleState.None);
         if (element.type === vscode.FileType.File) {
             treeItem.command = { command: 'ginkgotestfilesexplorer.openFile', title: "open file", arguments: [element.uri], };
             treeItem.contextValue = 'file';

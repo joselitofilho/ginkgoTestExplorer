@@ -3,7 +3,7 @@
 import * as vscode from 'vscode';
 import * as path from "path";
 import { Icons } from "../icons";
-import { GinkgoNode, isWrenchNode } from '../ginkgoNode';
+import { GinkgoNode, isSuiteTest, isWrenchNode } from '../ginkgoNode';
 
 // iconForGinkgoNode returns the icon representation of the ginkgo node.
 // See https://code.visualstudio.com/api/references/icons-in-labels#icon-listing
@@ -44,6 +44,17 @@ export function iconForGinkgoNode(context: vscode.ExtensionContext, node: Ginkgo
         };
     }
 
+    if (isSuiteTest(node)) {
+        let iconName = Icons.testSuite;
+        if (node.result !== undefined) {
+            iconName = (node.result.isPassed) ? Icons.testSuitePassed : Icons.testSuiteFailed;
+        }
+        return {
+            dark: context.asAbsolutePath(path.join("resources", "dark", iconName)),
+            light: context.asAbsolutePath(path.join("resources", "light", iconName))
+        };
+    }
+
     if (isWrenchNode(node)) {
         return {
             dark: context.asAbsolutePath(path.join("resources", "dark", Icons.wrench)),
@@ -58,22 +69,6 @@ export function iconForGinkgoNode(context: vscode.ExtensionContext, node: Ginkgo
             return {
                 dark: context.asAbsolutePath(path.join("resources", "dark", Icons.listTree)),
                 light: context.asAbsolutePath(path.join("resources", "light", Icons.listTree))
-            };
-        case 'Context':
-        case 'FContext':
-        case 'PContext':
-        case 'XContext':
-        case 'Describe':
-        case 'FDescribe':
-        case 'PDescribe':
-        case 'XDescribe':
-        case 'When':
-        case 'FWhen':
-        case 'PWhen':
-        case 'XWhen':
-            return {
-                dark: context.asAbsolutePath(path.join("resources", "dark", Icons.testSuite)),
-                light: context.asAbsolutePath(path.join("resources", "light", Icons.testSuite))
             };
         case 'By':
             return {
@@ -100,6 +95,10 @@ export function iconForGinkgoNodeItem(node: GinkgoNode): vscode.ThemeIcon | unde
         }
     }
 
+    if (isSuiteTest(node)) {
+        return new vscode.ThemeIcon('test-view-icon');
+    }
+
     if (isWrenchNode(node)) {
         return new vscode.ThemeIcon('wrench');
     }
@@ -109,19 +108,6 @@ export function iconForGinkgoNodeItem(node: GinkgoNode): vscode.ThemeIcon | unde
         case 'FDescribeTable':
         case 'PDescribeTable':
             return new vscode.ThemeIcon('list-tree');
-        case 'Context':
-        case 'FContext':
-        case 'PContext':
-        case 'XContext':
-        case 'Describe':
-        case 'FDescribe':
-        case 'PDescribe':
-        case 'XDescribe':
-        case 'When':
-        case 'FWhen':
-        case 'PWhen':
-        case 'XWhen':
-            return new vscode.ThemeIcon('test-view-icon');
         case 'By':
             return new vscode.ThemeIcon('comment');
         default:

@@ -2,6 +2,10 @@
 
 All notable changes to the "ginkgotestexplorer" extension will be documented in this file.
 
+### v0.0.15
+
+- Updates suite node when tests passed or not passed.
+
 ### v0.0.14
 
 - Test file tree view.

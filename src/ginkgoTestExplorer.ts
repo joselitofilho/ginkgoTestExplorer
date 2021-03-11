@@ -29,7 +29,6 @@ export class GinkgoTestExplorer {
     private ginkgoPath: string;
     private ginkgoTest: GinkgoTest;
     private statusBar: StatusBar;
-    private testCodeLensProvider: GinkgoRunTestCodeLensProvider;
     private testTreeDataExplorer: GinkgoTestTreeDataExplorer;
     private fnOutlineFromDoc: { (doc: vscode.TextDocument): Promise<GinkgoOutline> };
 
@@ -61,8 +60,8 @@ export class GinkgoTestExplorer {
         this.testTreeDataExplorer = new GinkgoTestTreeDataExplorer(context, this.commands, this.fnOutlineFromDoc, this.onRunTestTree.bind(this), this.onDebugTestTree.bind(this));
         new GinkgoTestFilesExplorer(context);
 
-        this.testCodeLensProvider = new GinkgoRunTestCodeLensProvider(context, this.fnOutlineFromDoc, this.onRunTest.bind(this));
-        this.testCodeLensProvider.setEnabled(getConfiguration().get('enableCodeLens', constants.defaultEnableCodeLens));
+        const testCodeLensProvider = new GinkgoRunTestCodeLensProvider(context, this.fnOutlineFromDoc, this.onRunTest.bind(this));
+        testCodeLensProvider.setEnabled(getConfiguration().get('enableCodeLens', constants.defaultEnableCodeLens));
 
         context.subscriptions.push(vscode.commands.registerCommand('ginkgotestexplorer.generateProjectCoverage', this.onGenerateProjectCoverage.bind(this)));
         context.subscriptions.push(vscode.commands.registerCommand('ginkgotestexplorer.generateSuiteCoverage', this.onGenerateSuiteCoverage.bind(this)));

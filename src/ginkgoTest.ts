@@ -10,6 +10,7 @@ import { TestResult } from './testResult';
 import { constants, ExecuteCommandsOn } from './constants';
 import { affectsConfiguration, getConfiguration, outputChannel } from './ginkgoTestExplorer';
 
+const coverageFolder = "coverage";
 const coverageHTML = "coverage.html";
 const coverageOut = "coverage.out";
 const ginkgoReport = "ginkgo.report";
@@ -106,14 +107,14 @@ export class GinkgoTest {
         const report = `-reportFile ${reportFile}`;
         const focus = `-focus "${spec}"`;
         const cover = `-cover -coverpkg=./... -coverprofile=${coverageDir}/${coverageOut}`;
-        const command = `${this.ginkgoPath} ${report} ${focus} ${cover} -r ${cwd}`;
+        const command = `${this.ginkgoPath} ${report} ${focus} ${cover} -r`;
         let testResults: TestResult[] = [];
         if (this.executeCommandsOn === 'onTerminal') {
-            let activeTerminal = vscode.window.terminals.find(t => t.name === "gte-bash");
+            let activeTerminal = vscode.window.terminals.find(t => t.name === gteBash);
             if (activeTerminal) {
                 activeTerminal.dispose();
             }
-            activeTerminal = vscode.window.createTerminal({ name: "gte-bash", cwd });
+            activeTerminal = vscode.window.createTerminal({ name: gteBash, cwd });
             if (activeTerminal) {
                 activeTerminal.show(true);
                 activeTerminal.sendText(`${command}`, true);
@@ -157,6 +158,9 @@ export class GinkgoTest {
             cwd = path.dirname(document.fileName);
         }
 
+        outputChannel.clear();
+        outputChannel.appendLine(`Running '${spec}' on debugging.`);
+
         const reportFile = this.prepareReportFile(cwd);
         const debugArgs: any = ['-ginkgo.debug', '-ginkgo.reportFile', reportFile, '-ginkgo.focus', spec];
         const debugConfig: vscode.DebugConfiguration = {
@@ -186,8 +190,8 @@ export class GinkgoTest {
         if (document) {
             cwd = path.dirname(document.fileName);
         }
-        const coverageDir = path.normalize(path.join(cwd, 'coverage'));
-        const command = `go tool cover -html=${coverageDir}/${coverageOut} -o ${coverageDir}/${coverageHTML}`;
+        const coverageDir = path.normalize(path.join(cwd, coverageFolder));
+        const command = `go tool cover -html=${coverageFolder}/${coverageOut} -o ${coverageDir}/${coverageHTML}`;
         outputChannel.appendLine(`${cwd}> ${command}`);
         await this.execCommand(command, cwd);
         return fs.readFileSync(`${coverageDir}/${coverageHTML}`, { encoding: 'utf8' });
@@ -277,7 +281,7 @@ export class GinkgoTest {
     }
 
     private prepareCoverageDir(outputDir: string): string {
-        const coverageDir = path.normalize(path.join(outputDir, 'coverage'));
+        const coverageDir = path.normalize(path.join(outputDir, coverageFolder));
 
         if (!fs.existsSync(`${coverageDir}`)) {
             fs.mkdirSync(`${coverageDir}`, { recursive: true });

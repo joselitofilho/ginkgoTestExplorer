@@ -27,6 +27,25 @@ export function isRunnableTest(node: GinkgoNode): boolean {
     return node.name !== 'By' && !node.pending && !isWrenchNode(node);
 }
 
+export function isSuiteTest(node: GinkgoNode): boolean {
+    switch (node.name) {
+        case 'Context':
+        case 'FContext':
+        case 'PContext':
+        case 'XContext':
+        case 'Describe':
+        case 'FDescribe':
+        case 'PDescribe':
+        case 'XDescribe':
+        case 'When':
+        case 'FWhen':
+        case 'PWhen':
+        case 'XWhen':
+            return true;
+    }
+    return false;
+}
+
 export function isWrenchNode(node: GinkgoNode): boolean {
     switch (node.name) {
         case 'BeforeEach':

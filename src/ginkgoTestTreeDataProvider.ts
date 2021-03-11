@@ -7,7 +7,7 @@ import * as decorationUtil from './util/decoration';
 import { Commands } from './commands';
 import { affectsConfiguration, getConfiguration, outputChannel } from './ginkgoTestExplorer';
 import { TestResult } from './testResult';
-import { GinkgoNode, isRootNode, isRunnableTest, isWrenchNode } from './ginkgoNode';
+import { GinkgoNode, isRootNode, isRunnableTest, isSuiteTest, isWrenchNode } from './ginkgoNode';
 import { constants, GO_MODE, UpdateOn } from './constants';
 
 export class GinkgoTestTreeDataProvider implements vscode.TreeDataProvider<GinkgoNode> {
@@ -231,11 +231,61 @@ export class GinkgoTestTreeDataProvider implements vscode.TreeDataProvider<Ginkg
                 this._onDidChangeTreeData.fire(testNode);
             }
         });
+
         this._discoveredTests.
             filter(t => !inResults.includes(t.key) && t.running).
-            forEach(testNode => {
-                testNode.running = false;
-                this._onDidChangeTreeData.fire(testNode);
+            forEach(t => {
+                t.running = false;
+                this._onDidChangeTreeData.fire(t);
+            });
+        
+        this._discoveredTests.
+            filter(t => t.spec).
+            forEach(t => this.updateSuiteTestResult(t));
+
+        this._discoveredTests.forEach(t => isSuiteTest(t) && this._onDidChangeTreeData.fire(t));
+    }
+
+    private updateSuiteTestResult(node: GinkgoNode) {
+        if (!isRootNode(node)) {
+            this.updateParentNode(this._discoveredTests, node);
+            this.updateSuiteTestResult(node.parent);
+        }
+    } 
+
+    private updateParentNode(graph: GinkgoNode[], node: GinkgoNode) {
+        const parentNode = graph.find(n => n.key === node.parent.key);
+        if (parentNode) {
+            if (parentNode.result === undefined) {
+                parentNode.result = node.result;
+            } else {
+                if (node.result) {
+                    parentNode.result.isPassed = parentNode.result.isPassed && node.result.isPassed;
+                }
+            }
+        }
+    }
+
+    private suiteTestResult(graph: GinkgoNode[], node: GinkgoNode, pre: Record<string, number>) {
+        if (node.spec && pre[node.key] === -1) {
+            pre[node.key]++;
+            this.updateParentNode(graph, node);
+            return;
+        }
+
+        if (!node.spec && node.nodes.length > 0) {
+            const visitedSpecNodes = node.nodes.filter(t => t.spec && pre[t.key] === -1);
+            if (visitedSpecNodes.length === 0) {
+                pre[node.key]++;
+                this.updateParentNode(graph, node);
+                this._onDidChangeTreeData.fire(node);
+            }
+        }
+
+        node.nodes
+            .filter(t => !isWrenchNode(t) && pre[t.key] === -1)
+            .forEach(t => {
+                this.suiteTestResult(graph, t, pre);
             });
     }
 }
