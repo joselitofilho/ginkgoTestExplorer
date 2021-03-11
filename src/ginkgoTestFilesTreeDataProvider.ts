@@ -153,7 +153,7 @@ export class GinkgoTestFilesTreeDataProvider implements vscode.TreeDataProvider<
     }
 
     getTreeItem(element: fileSystem.FileEntry): vscode.TreeItem {
-        const treeItem = new vscode.TreeItem(element.uri, element.type === vscode.FileType.Directory ? vscode.TreeItemCollapsibleState.Expanded : vscode.TreeItemCollapsibleState.None);
+        const treeItem = new vscode.TreeItem(element.uri, element.type === vscode.FileType.Directory ? vscode.TreeItemCollapsibleState.Collapsed : vscode.TreeItemCollapsibleState.None);
         if (element.type === vscode.FileType.File) {
             treeItem.command = { command: 'ginkgotestfilesexplorer.openFile', title: "open file", arguments: [element.uri], };
             treeItem.contextValue = 'file';
@@ -171,7 +171,7 @@ export class GinkgoTestFilesExplorer {
 
     constructor(private context: vscode.ExtensionContext) {
         this.treeDataProvider = new GinkgoTestFilesTreeDataProvider();
-        this.context.subscriptions.push(vscode.window.createTreeView('ginkgotestfilesexplorer', { treeDataProvider: this.treeDataProvider, showCollapseAll: false, canSelectMany: false }));
+        this.context.subscriptions.push(vscode.window.createTreeView('ginkgotestfilesexplorer', { treeDataProvider: this.treeDataProvider, showCollapseAll: true, canSelectMany: false }));
         this.context.subscriptions.push(vscode.commands.registerCommand('ginkgotestfilesexplorer.openFile', (resource) => this.openResource(resource)));
         this.context.subscriptions.push(vscode.commands.registerCommand('ginkgotestfilesexplorer.refreshTreeFiles', this.onRefreshTreeFiles.bind(this)));
     }
