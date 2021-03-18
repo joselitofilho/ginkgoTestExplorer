@@ -9,6 +9,8 @@ import { Commands } from './commands';
 import { TestResult } from './testResult';
 import { constants, ExecuteCommandsOn } from './constants';
 import { affectsConfiguration, getConfiguration, outputChannel } from './ginkgoTestExplorer';
+import { parseEnvFile } from './util/env';
+import { resolvePath } from './util/fileSystem';
 
 const coverageFolder = "coverage";
 const coverageHTML = "coverage.html";
@@ -20,7 +22,7 @@ export class GinkgoTest {
     private cwd: string;
     private executeCommandsOn: ExecuteCommandsOn;
     private testEnvVars: {};
-    private testEnvFile: string; 
+    private testEnvFile: string;
 
     constructor(private context: vscode.ExtensionContext, private ginkgoPath: string, private commands: Commands, private workspaceFolder?: vscode.WorkspaceFolder) {
         this.executeCommandsOn = getConfiguration().get('executeCommandsOn', constants.defaultExecuteCommandsOn);
@@ -28,7 +30,7 @@ export class GinkgoTest {
         this.testEnvFile = getConfiguration().get('testEnvFile', constants.defaultTestEnvFile);
 
         this.context.subscriptions.push(this.commands.checkGinkgoIsInstalledEmitter(this.checkGinkgoIsInstalled.bind(this), this));
-        
+
         this.context.subscriptions.push(vscode.workspace.onDidChangeConfiguration(evt => {
             if (affectsConfiguration(evt, 'ginkgoPath')) {
                 this.setGinkgoPath(getConfiguration().get('ginkgoPath', constants.defaultGinkgoPath));
@@ -84,7 +86,7 @@ export class GinkgoTest {
             if (activeTerminal) {
                 activeTerminal.dispose();
             }
-            activeTerminal = vscode.window.createTerminal({ name: gteBash, cwd });
+            activeTerminal = vscode.window.createTerminal({ name: gteBash, cwd, env: this.getEnv() });
             if (activeTerminal) {
                 activeTerminal.show(true);
                 activeTerminal.sendText(`${command}`, true);
@@ -114,7 +116,7 @@ export class GinkgoTest {
             if (activeTerminal) {
                 activeTerminal.dispose();
             }
-            activeTerminal = vscode.window.createTerminal({ name: gteBash, cwd });
+            activeTerminal = vscode.window.createTerminal({ name: gteBash, cwd, env: this.getEnv() });
             if (activeTerminal) {
                 activeTerminal.show(true);
                 activeTerminal.sendText(`${command}`, true);
@@ -138,18 +140,6 @@ export class GinkgoTest {
         }
         this.commands.sendTestResults(testResults);
         return testResults;
-    }
-
-    private async execGoTestOnOutputChannel(command: string) {
-        const cwd = this.cwd;
-        outputChannel.appendLine(`${cwd}> ${command}`);
-        try {
-            await this.execCommand(command, cwd);
-            outputChannel.appendLine('Project tests have been run.');
-        } catch (err) {
-            outputChannel.appendLine(`Error: go test failed.`);
-            outputChannel.appendLine(err);
-        }
     }
 
     public async debugTest(spec: string, document?: vscode.TextDocument): Promise<TestResult[]> {
@@ -183,7 +173,7 @@ export class GinkgoTest {
         const testResults: TestResult[] = await this.parseTestResults(xml);
         this.commands.sendTestResults(testResults);
         return testResults;
-    }    
+    }
 
     public async generateCoverage(document?: vscode.TextDocument): Promise<string> {
         let cwd = this.cwd;
@@ -237,6 +227,45 @@ export class GinkgoTest {
 
     public async callGomegaInstall(): Promise<boolean> {
         return await this.execCommand('go get github.com/onsi/gomega/...', this.cwd);
+    }
+
+    private getEnv(): { [key: string]: any } {
+        const env: { [key: string]: any } = {};
+
+        let envFile = this.testEnvFile || constants.defaultTestEnvFile;
+        let fileEnv: { [key: string]: any } = {};
+        if (envFile) {
+            envFile = resolvePath(envFile);
+            try {
+                fileEnv = parseEnvFile(envFile);
+            } catch (e) {
+                console.log(e);
+            }
+        }
+        Object.keys(fileEnv).forEach(
+            (key) => (env[key] = typeof fileEnv[key] === 'string' ? resolvePath(fileEnv[key], this.cwd) : fileEnv[key])
+        );
+
+        const envVars: { [key: string]: any } = this.testEnvVars || constants.defaultTestEnvVars;
+        Object.keys(envVars).forEach(
+            (key) =>
+            (env[key] =
+                typeof envVars[key] === 'string' ? resolvePath(envVars[key], this.cwd) : envVars[key])
+        );
+
+        return env;
+    }
+
+    private async execGoTestOnOutputChannel(command: string) {
+        const cwd = this.cwd;
+        outputChannel.appendLine(`${cwd}> ${command}`);
+        try {
+            await this.execCommand(command, cwd);
+            outputChannel.appendLine('Project tests have been run.');
+        } catch (err) {
+            outputChannel.appendLine(`Error: go test failed.`);
+            outputChannel.appendLine(err);
+        }
     }
 
     private async waitForReportFile(file: string): Promise<string> {
