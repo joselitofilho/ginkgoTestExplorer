@@ -2,6 +2,10 @@
 
 All notable changes to the "ginkgotestexplorer" extension will be documented in this file.
 
+### v0.0.16
+
+- Fixes the use of environment variables on the terminal.
+
 ### v0.0.15
 
 - Updates suite node when tests passed or not passed.
