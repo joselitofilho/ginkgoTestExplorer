@@ -2,6 +2,8 @@
 
 import * as vscode from 'vscode';
 import * as fs from 'fs';
+import * as path from 'path';
+import * as os from 'os';
 
 export function handleResult<T>(resolve: (result: T) => void, reject: (error: Error) => void, error: Error | null | undefined, result: T): void {
     if (error) {
@@ -141,4 +143,66 @@ export class FileStat implements vscode.FileStat {
 export interface FileEntry {
     uri: vscode.Uri;
     type: vscode.FileType;
+}
+
+export function resolvePath(inputPath: string, workspaceFolder?: string): string {
+	if (!inputPath || !inputPath.trim()) {
+		return inputPath;
+	}
+
+	if (!workspaceFolder && vscode.workspace.workspaceFolders) {
+		workspaceFolder = getWorkspaceFolderPath(
+			vscode.window.activeTextEditor && vscode.window.activeTextEditor.document.uri
+		);
+	}
+
+	if (workspaceFolder) {
+		inputPath = inputPath.replace(/\${workspaceFolder}|\${workspaceRoot}/g, workspaceFolder);
+	}
+	return resolveHomeDir(inputPath);
+}
+
+export function getWorkspaceFolderPath(fileUri?: vscode.Uri): string | undefined {
+	if (fileUri) {
+		const workspace = vscode.workspace.getWorkspaceFolder(fileUri);
+		if (workspace) {
+			return fixDriveCasingInWindows(workspace.uri.fsPath);
+		}
+	}
+
+	// fall back to the first workspace
+	const folders = vscode.workspace.workspaceFolders;
+	if (folders && folders.length) {
+		return fixDriveCasingInWindows(folders[0].uri.fsPath);
+	}
+	return undefined;
+}
+
+// Workaround for issue in https://github.com/Microsoft/vscode/issues/9448#issuecomment-244804026
+export function fixDriveCasingInWindows(pathToFix: string): string {
+	return process.platform === 'win32' && pathToFix
+		? pathToFix.substr(0, 1).toUpperCase() + pathToFix.substr(1)
+		: pathToFix;
+}
+
+export function resolveHomeDir(inputPath: string): string {
+	if (!inputPath || !inputPath.trim()) {
+		return inputPath;
+	}
+	return inputPath.startsWith('~') ? path.join(os.homedir(), inputPath.substr(1)) : inputPath;
+}
+
+// Walks up given folder path to return the closest ancestor that has `src` as a child
+export function getInferredGopath(folderPath: string): string | undefined {
+	if (!folderPath) {
+		return;
+	}
+
+	const dirs = folderPath.toLowerCase().split(path.sep);
+
+	// find src directory closest to given folder path
+	const srcIdx = dirs.lastIndexOf('src');
+	if (srcIdx > 0) {
+		return folderPath.substr(0, dirs.slice(0, srcIdx).join(path.sep).length);
+	}
 }
