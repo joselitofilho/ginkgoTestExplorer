@@ -67,19 +67,14 @@ export class GinkgoTest {
         this.executeCommandsOn = executeCommandsOn;
     }
 
-    public async runGoTestOnOutputChannel() {
-        const cwd = this.cwd;
-        const coverageDir = this.prepareCoverageDir(cwd);
-        const outputTestFile = `${coverageDir}/${coverageOut}`;
-        const command = `go test -coverpkg=./... -coverprofile=${outputTestFile} -count=1 ./...`;
+    public async runGoTestOnOutputChannel(withCover: boolean) {
+        const command = this.buildGoTestCommand(this.cwd, withCover);
         await this.execGoTestOnOutputChannel(command);
     }
 
-    public async runGoTest() {
+    public async runGoTest(withCover: boolean) {
         const cwd = this.cwd;
-        const coverageDir = this.prepareCoverageDir(cwd);
-        const outputTestFile = `${coverageDir}/${coverageOut}`;
-        const command = `go test -coverpkg=./... -coverprofile=${outputTestFile} -count=1 ./...`;
+        const command = this.buildGoTestCommand(cwd, withCover);
 
         if (this.executeCommandsOn === 'onTerminal') {
             let activeTerminal = vscode.window.terminals.find(t => t.name === gteBash);
@@ -98,7 +93,7 @@ export class GinkgoTest {
         }
     }
 
-    public async runTest(spec: string, document?: vscode.TextDocument): Promise<TestResult[]> {
+    public async runTest(spec: string, withCover: boolean, document?: vscode.TextDocument): Promise<TestResult[]> {
         let cwd = this.cwd;
         if (document) {
             cwd = path.dirname(document.fileName);
@@ -108,7 +103,7 @@ export class GinkgoTest {
 
         const report = `-reportFile ${reportFile}`;
         const focus = `-focus "${spec}"`;
-        const cover = `-cover -coverpkg=./... -coverprofile=${coverageDir}/${coverageOut}`;
+        const cover = withCover ? `-cover -coverpkg=./... -coverprofile=${coverageDir}/${coverageOut}` : '';
         const command = `${this.ginkgoPath} ${report} ${focus} ${cover} -r`;
         let testResults: TestResult[] = [];
         if (this.executeCommandsOn === 'onTerminal') {
@@ -227,6 +222,13 @@ export class GinkgoTest {
 
     public async callGomegaInstall(): Promise<boolean> {
         return await this.execCommand('go get github.com/onsi/gomega/...', this.cwd);
+    }
+
+    private buildGoTestCommand(cwd: string, withCover: boolean): string {
+        const coverageDir = this.prepareCoverageDir(cwd);
+        const outputTestFile = `${coverageDir}/${coverageOut}`;
+        const coverParams = withCover ? `-coverpkg=./... -coverprofile=${outputTestFile}` : '';
+        return `go test ${coverParams} -count=1 ./...`;
     }
 
     private getEnv(): { [key: string]: any } {
