@@ -7,7 +7,7 @@
     "type": "git",
     "url": "https://github.com/joselitofilho/ginkgoTestExplorer"
   },
-  "version": "0.0.16",
+  "version": "0.0.17",
   "publisher": "joselitofilho",
   "engines": {
     "vscode": "^1.53.0"
@@ -23,6 +23,8 @@
     "Other"
   ],
   "activationEvents": [
+    "onCommand:ginkgotestexplorer.runAllProjectTests",
+    "onCommand:ginkgotestexplorer.generateProjectCoverage",
     "onView:ginkgotestexplorer",
     "onView:ginkgotestfilesexplorer"
   ],
