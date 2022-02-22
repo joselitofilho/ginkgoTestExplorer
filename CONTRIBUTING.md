@@ -94,11 +94,11 @@ git checkout -b feat/my-feature
 ```bash
 yarn lint
 ```
-- Push your branch to [`surf-king`](https://github.com/board-games-jf/surf-king) repository
+- Push your branch to [`ginkgoTestExplorer`](https://github.com/joselitofilho/ginkgoTestExplorer) repository
 - Open PR against the main branch. 🏄
 
 ## Credits
 
 ### Contributors
 
-Thank you to all the people who have already contributed to `surf-king`!
+Thank you to all the people who have already contributed to `ginkgoTestExplorer`!
