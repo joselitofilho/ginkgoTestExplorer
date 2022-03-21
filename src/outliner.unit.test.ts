@@ -12,7 +12,7 @@ const sampleOutput: string = `[{"name":"Describe","text":"NormalFixture","start"
 
 describe('outline.fromJSON', function () {
     it('should return an Outline with equivalent nested and flat representations', function () {
-        const got = outliner.fromJSON(sampleOutput);
+        const got = outliner.fromJSON(sampleOutput, 1);
 
         let i = 0;
         for (let n of got.nested) {
@@ -25,7 +25,7 @@ describe('outline.fromJSON', function () {
     });
 
     it('should return an Outline where every child node references its parent', function () {
-        const got = outliner.fromJSON(sampleOutput);
+        const got = outliner.fromJSON(sampleOutput, 1);
 
         for (let tn of got.nested) {
             for (let c of tn.nodes) {

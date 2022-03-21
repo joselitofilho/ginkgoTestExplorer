@@ -257,10 +257,13 @@ export class GinkgoTestTreeDataProvider implements vscode.TreeDataProvider<Ginkg
         const parentNode = graph.find(n => n.key === node.parent.key);
         if (parentNode) {
             if (parentNode.result === undefined) {
-                parentNode.result = node.result;
+                parentNode.result = node.result ? { ...node.result } : undefined;
             } else {
                 if (node.result) {
-                    parentNode.result.isPassed = parentNode.result.isPassed && node.result.isPassed;
+                    parentNode.result = {
+                        ...parentNode.result,
+                        isPassed: parentNode.result.isPassed && node.result.isPassed
+                    };
                 }
             }
         }

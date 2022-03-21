@@ -4,6 +4,7 @@ import * as vscode from 'vscode';
 import * as cp from 'child_process';
 import { Commands } from './commands';
 import { GinkgoNode } from './ginkgoNode';
+import { detectGinkgoMajorVersion } from './util/ginkgoVersion';
 
 export interface GinkgoOutline {
     nested: GinkgoNode[];
@@ -20,18 +21,28 @@ export function preOrder(node: GinkgoNode, f: Function): void {
 }
 
 export class GinkgoOutliner {
+    private ginkgoMajorVersion: number = 2;
 
-    constructor(private ginkgoPath: string, private commands: Commands) { };
+    constructor(private ginkgoPath: string, private commands: Commands) {
+        this.detectGinkgoMajorVersion();
+    };
+
+    private async detectGinkgoMajorVersion() {
+        try {
+            this.ginkgoMajorVersion = await detectGinkgoMajorVersion(this.ginkgoPath);
+        } catch (err) {}
+    }
 
     public setGinkgoPath(ginkgoPath: string) {
         this.ginkgoPath = ginkgoPath;
+        this.detectGinkgoMajorVersion();
     }
 
     // fromDocument returns the ginkgo outline for the TextDocument. It calls ginkgo
     // as an external process.
     public async fromDocument(doc: vscode.TextDocument): Promise<GinkgoOutline> {
         const output: string = await callGinkgoOutline(this.ginkgoPath, doc);
-        const outline: GinkgoOutline = fromJSON(output);
+        const outline: GinkgoOutline = fromJSON(output, this.ginkgoMajorVersion);
         this.commands.sendDiscoveredTests(outline.flat);
         return outline;
     }
@@ -72,21 +83,21 @@ export async function callGinkgoOutline(ginkgoPath: string, doc: vscode.TextDocu
     });
 }
 
-function getNodeKey(node: GinkgoNode): string {
-    if (node.name.endsWith("When")) {
-        return getNodeKey(node.parent) + " when " + node.text;
+function getNodeKey(node: GinkgoNode, ginkgoMajorVersion: number): string {
+    if (ginkgoMajorVersion < 2 && node.name.endsWith("When")) {
+        return getNodeKey(node.parent, ginkgoMajorVersion) + " when " + node.text;
     }
     if (node.parent) {
-        return getNodeKey(node.parent) + " " + node.text;
+        return getNodeKey(node.parent, ginkgoMajorVersion) + " " + node.text;
     }
     return node.text;
 }
 
-export function fromJSON(input: string): GinkgoOutline {
+export function fromJSON(input: string, ginkgoMajorVersion: number): GinkgoOutline {
     const nested: GinkgoNode[] = JSON.parse(input);
 
     nested.forEach(node => {
-        node.key = getNodeKey(node).trim();
+        node.key = getNodeKey(node, ginkgoMajorVersion).trim();
     });
 
     const flat: GinkgoNode[] = [];
@@ -103,7 +114,7 @@ export function fromJSON(input: string): GinkgoOutline {
     }
     
     flat.forEach(node => {
-        node.key = getNodeKey(node).trim();
+        node.key = getNodeKey(node, ginkgoMajorVersion).trim();
     });
 
     const hasFocused = flat.find(o => o.focused);
