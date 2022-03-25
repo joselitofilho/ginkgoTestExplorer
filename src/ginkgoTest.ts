@@ -11,6 +11,8 @@ import { constants, ExecuteCommandsOn } from './constants';
 import { affectsConfiguration, getConfiguration, outputChannel } from './ginkgoTestExplorer';
 import { parseEnvFile } from './util/env';
 import { resolvePath } from './util/fileSystem';
+import { detectGinkgoMajorVersion } from './util/ginkgoVersion';
+import type { JSONReport, JSONSpecReport, JSONSuiteReport } from './ginkgoJSONReport';
 
 const coverageFolder = "coverage";
 const coverageHTML = "coverage.html";
@@ -94,16 +96,25 @@ export class GinkgoTest {
     }
 
     public async runTest(spec: string, withCover: boolean, document?: vscode.TextDocument): Promise<TestResult[]> {
+        const ginkgoMajorVersion = await this.detectGinkgoMajorVersion();
+
         let cwd = this.cwd;
         if (document) {
             cwd = path.dirname(document.fileName);
         }
-        const reportFile = this.prepareReportFile(cwd);
+        const reportFile = this.prepareReportFile(ginkgoMajorVersion >= 2 ? '.' : cwd);
+        const reportFileFull = this.prepareReportFile(cwd);
         const coverageDir = this.prepareCoverageDir(cwd);
 
-        const report = `-reportFile ${reportFile}`;
-        const focus = `-focus "${spec}"`;
-        const cover = withCover ? `-cover -coverpkg=./... -coverprofile=${coverageDir}/${coverageOut}` : '';
+        const report = ginkgoMajorVersion >= 2
+            ? `--json-report ${reportFile}`
+            : `-reportFile ${reportFile}`;
+        const focus = ginkgoMajorVersion < 2 || !withCover ? `-focus "${spec}"` : '';
+        const cover = withCover
+            ? ginkgoMajorVersion < 2
+                ? `-cover -coverpkg=./... -coverprofile=${coverageDir}/${coverageOut}`
+                : `-coverpkg=./... -coverprofile=./${coverageFolder}/${coverageOut}`
+            : '';
         const command = `${this.ginkgoPath} ${report} ${focus} ${cover} -r`;
         let testResults: TestResult[] = [];
         if (this.executeCommandsOn === 'onTerminal') {
@@ -116,8 +127,10 @@ export class GinkgoTest {
                 activeTerminal.show(true);
                 activeTerminal.sendText(`${command}`, true);
 
-                const xml = await this.waitForReportFile(reportFile);
-                testResults = await this.parseTestResults(xml);
+                const xml = await this.waitForReportFile(reportFileFull);
+                testResults = ginkgoMajorVersion >= 2
+                    ? await this.parseTestResultsFromJSONReport(xml)
+                    : await this.parseTestResults(xml);
             }
         } else {
             outputChannel.show(true);
@@ -130,8 +143,10 @@ export class GinkgoTest {
                 outputChannel.appendLine(err);
             }
 
-            const xml = this.readReportFile(reportFile);
-            testResults = await this.parseTestResults(xml);
+            const xml = this.readReportFile(reportFileFull);
+            testResults = ginkgoMajorVersion >= 2
+                ? await this.parseTestResultsFromJSONReport(xml)
+                : await this.parseTestResults(xml);
         }
         this.commands.sendTestResults(testResults);
         return testResults;
@@ -289,6 +304,32 @@ export class GinkgoTest {
         return result;
     }
 
+    private getTestName(spec: JSONSpecReport, suite: JSONSuiteReport): string {
+        return ((spec.ContainerHierarchyTexts ? (spec.ContainerHierarchyTexts?.join(' ') + ' ') : '')
+            + (spec.LeafNodeText || spec.LeafNodeType)).trim();
+    }
+
+    private async parseTestResultsFromJSONReport(json: string) {
+        let testResults: TestResult[] = [];
+        const report = JSON.parse(json) as JSONReport;
+        for (const suite of report) {
+            for (const spec of suite.SpecReports) {
+                const isSkipped = spec.State === 'skipped';
+                if (spec.State === 'failed') {
+                    const { Failure } = spec;
+                    testResults = [...testResults, new TestResult(suite.SuiteDescription, this.getTestName(spec, suite), false, isSkipped,
+                        Failure
+                            ? `${Failure.Message} at ${Failure.Location.FileName}:${Failure.Location.LineNumber}`
+                            : undefined )];
+                } else {
+                    testResults = [...testResults, new TestResult(suite.SuiteDescription, this.getTestName(spec, suite), true, isSkipped)];
+                }
+            }
+        }
+
+        return testResults;
+    }
+
     private async parseTestResults(xml: string) {
         let testResults: TestResult[] = [];
         const report = await junit2json.parse(xml) as junit2json.TestSuite;
@@ -345,6 +386,10 @@ export class GinkgoTest {
                 reject(err);
             }
         });
+    }
+
+    private async detectGinkgoMajorVersion(): Promise<number> {
+        return detectGinkgoMajorVersion(this.ginkgoPath);
     }
 
 }
