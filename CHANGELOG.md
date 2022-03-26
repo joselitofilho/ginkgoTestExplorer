@@ -2,6 +2,10 @@
 
 All notable changes to the "ginkgotestexplorer" extension will be documented in this file.
 
+### v1.0.0
+
+- Adds support do Ginkgo v2.
+
 ### v0.0.17
 
 - Removes unnecessary cover profile arguments.

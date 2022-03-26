@@ -20,17 +20,17 @@ conduct](CODE_OF_CONDUCT.md).
 
 First time only:
 ```bash
-docker-compose build
+$ docker-compose build
 ```
 
 Run container:
 ```bash
-docker-compose up -d
+$ docker-compose up -d
 ```
 
 Enter on container:
 ```bash
-docker-compose exec server bash
+$ docker-compose exec server bash
 ```
 
 ## Visual Studio Code
@@ -62,17 +62,28 @@ yarn
 
 Install dependencies:
 ```bash
-yarn install
+$ yarn install
 ```
+
+Update the version number in the [package.json](package.json) file
+
+Update the [change log](CHANGELOG.md) file
 
 Packages extension:
 ```bash
-vsce package
+$ vsce package
 ```
+(Optional) if you get this problem:
+```bash
+node_modules/junit2json/dist/index.d.ts:1:8 - error TS1192: Module '"/src/node_modules/junit2json/node_modules/@types/xml2js/index"' has no default export.
+
+1 import xml2js from 'xml2js';
+```
+Chnage the first line of this file `node_modules/junit2json/dist/index.d.ts` from `import xml2js from 'xml2js';` to `import * as xml2js from 'xml2js';`
 
 Publishes extension:
 ```bash
-vsce pulish
+$ vsce pulish
 ```
 
 ## Create a commit
@@ -87,12 +98,12 @@ You can follow the documentation on
 
 - go to a new branch
 ```bash
-git checkout -b feat/my-feature
+$ git checkout -b feat/my-feature
 ```
 - make your changes
 - run tests and linter again 
 ```bash
-yarn lint
+$ yarn lint
 ```
 - Push your branch to [`ginkgoTestExplorer`](https://github.com/joselitofilho/ginkgoTestExplorer) repository
 - Open PR against the main branch. 🏄
