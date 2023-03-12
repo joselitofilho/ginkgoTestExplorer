@@ -233,6 +233,12 @@
             "Exeucte commands on terminal"
           ],
           "description": "When to execute commands."
+        },
+        "ginkgotestexplorer.buildTags": { 
+          "type": "string",
+          "default": null,
+          "description": "Build tags to be passed to ginkgo and vscode debug configuration using the flag `--tags=`",
+          "scope": "resource"
         }
       }
     }
