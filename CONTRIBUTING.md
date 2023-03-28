@@ -30,7 +30,7 @@ $ docker-compose up -d
 
 Enter on container:
 ```bash
-$ docker-compose exec server bash
+$ docker-compose exec ginkgo bash
 ```
 
 ## Visual Studio Code

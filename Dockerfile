@@ -1,4 +1,4 @@
-FROM golang:1.15.3
+FROM golang:1.19.4
 RUN apt-get update
 RUN apt-get install -y git python jq curl vim
 
@@ -9,6 +9,6 @@ RUN npm install gulp -g \
     && npm install -g yo generator-code \
     && npm install -g vsce
 
-WORKDIR /src
+WORKDIR /app
 
 COPY . .
