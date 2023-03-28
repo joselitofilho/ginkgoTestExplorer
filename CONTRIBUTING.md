@@ -83,7 +83,7 @@ Chnage the first line of this file `node_modules/junit2json/dist/index.d.ts` fro
 
 Publishes extension:
 ```bash
-$ vsce pulish
+$ vsce publish
 ```
 
 ## Create a commit
