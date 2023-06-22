@@ -84,7 +84,7 @@ export async function callGinkgoOutline(ginkgoPath: string, doc: vscode.TextDocu
 }
 
 function getNodeKey(node: GinkgoNode, ginkgoMajorVersion: number): string {
-    if (ginkgoMajorVersion < 2 && node.name.endsWith("When")) {
+    if (node.name.endsWith("When")) {
         return getNodeKey(node.parent, ginkgoMajorVersion) + " when " + node.text;
     }
     if (node.parent) {
