@@ -8,7 +8,7 @@ import * as junit2json from 'junit2json';
 import { Commands } from './commands';
 import { TestResult } from './testResult';
 import { constants, ExecuteCommandsOn } from './constants';
-import { affectsConfiguration, getConfiguration, outputChannel } from './ginkgoTestExplorer';
+import { affectsConfiguration, getConfiguration, outputChannel, replaceVscodeVariables } from './ginkgoTestExplorer';
 import { parseEnvFile } from './util/env';
 import { resolvePath } from './util/fileSystem';
 import { detectGinkgoMajorVersion } from './util/ginkgoVersion';
@@ -37,7 +37,8 @@ export class GinkgoTest {
 
         this.context.subscriptions.push(vscode.workspace.onDidChangeConfiguration(evt => {
             if (affectsConfiguration(evt, 'ginkgoPath')) {
-                this.setGinkgoPath(getConfiguration().get('ginkgoPath', constants.defaultGinkgoPath));
+                let ginkgoPathConfig = getConfiguration().get('ginkgoPath', constants.defaultGinkgoPath);
+                this.setGinkgoPath(replaceVscodeVariables(ginkgoPathConfig));
             }
             if (affectsConfiguration(evt, 'testEnvVars')) {
                 this.setTestEnvVars(getConfiguration().get('testEnvVars', constants.defaultTestEnvVars));

@@ -15,6 +15,20 @@ export function getConfiguration(): vscode.WorkspaceConfiguration {
     return vscode.workspace.getConfiguration(constants.extensionName);
 }
 
+export function replaceVscodeVariables(configValue: string): string {
+    let workspaceFolder = undefined;
+    let uri = vscode.window.activeTextEditor?.document.uri;
+    if (uri) {
+        workspaceFolder = vscode.workspace.getWorkspaceFolder(uri);
+    }
+
+    if (workspaceFolder) {
+        configValue = configValue.replace('${workspaceFolder}', workspaceFolder.uri.fsPath);
+    }
+
+    return configValue;
+}
+
 export function affectsConfiguration(evt: vscode.ConfigurationChangeEvent, name: string): boolean {
     return evt.affectsConfiguration(`${constants.extensionName}.${name}`);
 }
