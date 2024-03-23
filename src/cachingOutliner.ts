@@ -3,7 +3,7 @@
 import * as vscode from 'vscode';
 import { constants } from './constants';
 import * as outliner from './ginkgoOutliner';
-import { affectsConfiguration, getConfiguration, outputChannel } from './ginkgoTestExplorer';
+import { affectsConfiguration, getConfiguration, outputChannel, replaceVscodeVariables } from './ginkgoTestExplorer';
 
 interface CacheValue {
     docVersion: number,
@@ -22,7 +22,8 @@ export class CachingOutliner {
         this.context.subscriptions.push({ dispose: () => { this.clear(); } });
         this.context.subscriptions.push(vscode.workspace.onDidChangeConfiguration(evt => {
             if (affectsConfiguration(evt, 'ginkgoPath')) {
-                this.outliner.setGinkgoPath(getConfiguration().get('ginkgoPath', constants.defaultGinkgoPath));
+                let ginkgoPathConfig = getConfiguration().get('ginkgoPath', constants.defaultGinkgoPath);
+                this.outliner.setGinkgoPath(replaceVscodeVariables(ginkgoPathConfig));
                 this.setOutliner(this.outliner);
             }
             if (affectsConfiguration(evt, 'cacheTTL')) {
