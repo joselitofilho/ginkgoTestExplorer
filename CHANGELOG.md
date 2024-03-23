@@ -2,6 +2,12 @@
 
 All notable changes to the "ginkgotestexplorer" extension will be documented in this file.
 
+### v1.0.2
+
+- Adds support to the workspace folder variable.
+- Fixes recover "when" keyword injection.
+- Updates documentation.
+
 ### v1.0.1
 
 - Adds support to pass build tags to Ginkgo.
