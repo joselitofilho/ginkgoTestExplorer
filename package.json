@@ -190,7 +190,7 @@
         "ginkgotestexplorer.ginkgoPath": {
           "type": "string",
           "default": "ginkgo",
-          "description": "Path to ginkgo executable."
+          "description": "Path to ginkgo executable. Environment variables are not expanded."
         },
         "ginkgotestexplorer.doubleClickThreshold": {
           "type": "number",
