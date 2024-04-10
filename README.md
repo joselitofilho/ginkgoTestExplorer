@@ -1,5 +1,13 @@
 # Ginkgo Test Explorer for VS Code
 
+<div align="center">
+
+[![GitHub tag](https://img.shields.io/github/release/joselitofilho/ginkgoTestExplorer?include_prereleases=&sort=semver&color=2ea44f&style=for-the-badge)](https://github.com/joselitofilho/ginkgoTestExplorer/releases/)
+[![Slack chat](https://img.shields.io/static/v1?logo=slack&style=for-the-badge&label=slack&color=2ea44f&message=gophers)](https://app.slack.com/client/T029RQSE6/C06TMUDMC5B)
+[![BuyMeACoffee](https://img.shields.io/badge/Buy%20Me%20a%20Coffee-ffdd00?style=for-the-badge&logo=buy-me-a-coffee&logoColor=black)](https://www.buymeacoffee.com/joselitofilho)
+
+</div>
+
 Welcome!
 
 This VS Code extension offers a set of tools for the [Ginkgo Framework](https://onsi.github.io/ginkgo/).
