@@ -141,6 +141,10 @@ export class GinkgoTestTreeDataProvider implements vscode.TreeDataProvider<Ginkg
             outputChannel.appendLine(`Did not populate outline view: document "${this.editor.document.uri}" language is not Go.`);
             return undefined;
         }
+        if (!this.editor.document.fileName.toLowerCase().endsWith("_test.go")) {
+            outputChannel.appendLine(`Did not populate outline view: document "${this.editor.document.uri}" does not end with '_test.go'.`);
+            return undefined;
+        }
         if (this._roots.length === 0) {
             try {
                 const outline = await this.outlineFromDoc(this.editor.document);
